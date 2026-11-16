@@ -32,6 +32,24 @@ for (method in c("pb", "mult")) {
   reversed <- gof.test(g, "gamma", 3, list(scale = 3, shape = 2),
                        simulation = method, ng = 17, lower = c(0.01, 0.01))
   stopifnot(identical(scale, reversed))
+  rate <- gof.test(g, "gamma", 3, list(shape = 2, rate = 1 / 3),
+                   simulation = method, ng = 17, lower = c(0.01, 0.01))
+  stopifnot(abs(rate$estimate[1] - scale$estimate[1]) < 1e-3,
+            abs(rate$estimate[2] - 1 / scale$estimate[2]) < 1e-3,
+            max(abs(rate$statistic - scale$statistic)) < 1e-3)
+}
+
+# Custom densities without a log argument retain the non-log likelihood path.
+dnolog <- function(x, rate) dexp(x, rate)
+pnolog <- function(q, rate) pexp(q, rate)
+rnolog <- function(n, rate) rexp(n, rate)
+set.seed(129)
+z <- rexp(40, 2)
+for (method in c("pb", "mult")) {
+  a <- gof.test(z, "nolog", 3, list(rate = 2), simulation = method,
+                ng = 17, lower = 0.01)
+  stopifnot(abs(a$estimate - 1 / mean(z)) < 1e-4,
+            all(is.finite(unlist(a))))
 }
 
 # Numerical and analytical lognormal derivatives, including distinct grids.
