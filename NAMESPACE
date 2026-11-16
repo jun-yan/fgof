@@ -1,1 +1,4 @@
 export(gof.test)
+importFrom(stats, dt, ecdf, optim, pt, quantile, rnorm, var)
+importFrom(mvtnorm, dmvnorm, dmvt, GenzBretz, pmvnorm, pmvt, rmvnorm, rmvt, TVPACK)
+importFrom(numDeriv, jacobian)

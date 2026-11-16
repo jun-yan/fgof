@@ -77,6 +77,8 @@ gof.test <- function(x, distr, nsim, start,
 #### distr: character string for the name of the distribution
 #### nsim: bootstrap sample size
 #### start: a named list to be passed to fitdistr
+  simulation <- match.arg(simulation)
+  qgrid <- match.arg(qgrid)
   n <- NROW(x)
   dim <- NCOL(x)
   if (is.null(gridStat)) gridStat <- if (dim == 1) TRUE else FALSE
