@@ -6,6 +6,8 @@ Date: 2026-11-16
 Author: Ivan Kojadinovic and Jun Yan
 Maintainer: Jun Yan <jun.yan@uconn.edu>
 Depends: mvtnorm, numDeriv
+Suggests: testthat (>= 3.0.0)
+Config/testthat/edition: 3
 Description: Goodness-of-fit test with multiplier or parametric
         bootstrap for continuous distributions with estimated parameters.
         Implements the procedures of Kojadinovic and Yan (2012)
