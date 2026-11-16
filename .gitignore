@@ -1,0 +1,16 @@
+# Generated package builds and checks at the repository root.
+/*.tar.gz
+/*.Rcheck/
+
+# Keep audit logs; omit copied sources, installations, wrappers, and PDFs.
+/misc/audit/phase1/*-check/00_pkg_src/
+/misc/audit/phase1/*-check/fgof/
+/misc/audit/phase1/*-check/R_check_bin/
+/misc/audit/phase1/*-check/*.pdf
+
+# Local R session and editor state.
+.Rhistory
+.Rapp.history
+.RData
+.Rproj.user/
+.DS_Store
