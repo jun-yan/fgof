@@ -32,6 +32,7 @@ for (method in c("mult", "pb")) for (grid in c(FALSE, TRUE)) {
                   gridStat = grid, ng = 17)
   expected <- if (grid) c("ks", "cvm", "ksa", "cvma") else c("ksa", "cvma")
   stopifnot(identical(dim(out$stat.sim), c(length(expected), 1L)),
+            all(out$p.value >= 0 & out$p.value <= 1),
             identical(names(out$statistic), expected),
             identical(names(out$p.value), expected),
             identical(rownames(out$stat.sim), expected))
