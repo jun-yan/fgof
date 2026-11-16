@@ -1,0 +1,11 @@
+^AGENTS\.md$
+^REVIVAL_AUDIT\.md$
+^REVIVAL_REPORT\.md$
+^cran-comments\.md$
+^Makefile$
+^misc$
+^\.git$
+^\.gitignore$
+^\.github$
+^.*\.Rcheck$
+^.*\.tar\.gz$
