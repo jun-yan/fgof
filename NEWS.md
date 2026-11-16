@@ -1,4 +1,4 @@
-# fgof development version
+# fgof 0.2-2
 
 ## Compatibility
 
@@ -10,3 +10,18 @@
 - Remove the recovered tarball's generated MD5 manifest from the maintained
   source tree; package builds generate a fresh manifest.
 - Add dependency-free, fixed-seed regression tests.
+
+## Correctness
+
+- Preserve parameter names and fixed distribution arguments during fitting,
+  CDF/density evaluation, quantile-grid construction, and bootstrap simulation.
+  In particular, gamma scale parameters are no longer interpreted as rates.
+- Evaluate analytical CDF derivatives at the requested grid points, and validate
+  callback dimensions before matrix operations.
+- Align parametric-bootstrap statistic and p-value labels with the observed
+  statistics, retaining the returned list and matrix structure.
+- Replace the unavailable `mecdf` call with direct empirical lower-orthant counts,
+  using the empirical CDF definition in the original paper and no new dependency.
+- Report invalid inputs and singular score covariance matrices more clearly.
+  Optimizer defaults, covariance normalization, centering, and test statistics
+  are unchanged.

@@ -21,14 +21,17 @@ findMLE <- function(x, densfun, start, ...) {
   if (any(is.na(m))) 
     stop("'start' specifies names which are not arguments to 'densfun'")
   start <- start[order(m)]
+  nm <- names(start)
   if (length(nm) == 1L) start <- c(unlist(start)) ## added for multivariate
 
 
   ## assuming for multivariate distribution, the parameters are stored
   ## in one parameter vector (e.g., param in dmymvnorm)
-  dens <- function(parm, x, ...) densfun(x, parm, ...)
-  if ((l <- length(nm)) > 1L) 
-    body(dens) <- parse(text = paste("densfun(x,", paste("parm[", 1L:l, "]", collapse = ", "), ", ...)"))
+  dens <- function(parm, x, ...) {
+    parameters <- if (length(nm) == 1L) setNames(list(parm), nm)
+                  else setNames(as.list(parm), nm)
+    do.call(densfun, c(list(x), parameters, list(...)))
+  }
   
   Call <- match.call(expand.dots = TRUE)
   Call[[1L]] <- as.name("optim")
@@ -79,6 +82,36 @@ gof.test <- function(x, distr, nsim, start,
 #### start: a named list to be passed to fitdistr
   simulation <- match.arg(simulation)
   qgrid <- match.arg(qgrid)
+  if (!is.numeric(x) || !(is.null(dim(x)) || is.matrix(x)) ||
+      NROW(x) < 1L || NCOL(x) < 1L || any(!is.finite(x)))
+    stop("'x' must be a nonempty numeric vector or matrix of finite values")
+  for (arg in c("nsim", "ng")) {
+    value <- get(arg)
+    if (!is.numeric(value) || length(value) != 1L || !is.finite(value) ||
+        value < 1 || value != floor(value) || value > .Machine$integer.max)
+      stop("'", arg, "' must be a positive integer")
+  }
+  if (!is.list(start) || length(start) == 0L ||
+      is.null(names(start)) || anyNA(names(start)) || any(names(start) == "") ||
+      anyDuplicated(names(start)) ||
+      any(!vapply(start, function(z) is.numeric(z) && length(z) > 0L &&
+                   all(is.finite(z)), logical(1))))
+    stop("'start' must be a nonempty named list of finite numeric parameters")
+  if (NCOL(x) == 1L && any(lengths(start) != 1L))
+    stop("each univariate parameter in 'start' must be a scalar")
+  if (!is.null(gridStat) &&
+      (length(gridStat) != 1L || is.na(gridStat) ||
+       !(is.logical(gridStat) || is.numeric(gridStat)) ||
+       !gridStat %in% c(FALSE, TRUE)))
+    stop("'gridStat' must be TRUE or FALSE")
+  for (fun in list(derCdfWrtPar, derLogPdfWrtPar))
+    if (!is.null(fun) && !is.function(fun))
+      stop("derivative callbacks must be functions or NULL")
+  if (!is.list(method.args))
+    stop("'method.args' must be a list; supply it explicitly when passing optim's 'method'")
+  dots <- list(...)
+  if (length(dots) > 0L && (is.null(names(dots)) || any(names(dots) == "")))
+    stop("arguments in '...' must be named")
   n <- NROW(x)
   dim <- NCOL(x)
   if (is.null(gridStat)) gridStat <- if (dim == 1) TRUE else FALSE
@@ -97,53 +130,30 @@ gof.test <- function(x, distr, nsim, start,
   p <- length(thetahat)
   log.arg <- "log" %in% names(formals(ddistr))
   
-  ## creat some calls to be evaluated later;
-  ## ddistr.call, rdistr.call and pdistr.call are for dim == 1 only
-  rdistr.call <- parse(text = paste("rdistr(n, ",  paste("theta[", 1L:p, "]", collapse = ", "), ")"))
-  pdistr.call <- parse(text = paste("pdistr(x, ",  paste("theta[", 1L:p, "]", collapse = ", "), ")"))
-  ddistr.call <- if (log.arg)  parse(text = paste("ddistr(x, ", paste("theta[", 1L:p, "]", collapse = ", "), ", log = TRUE)")) else parse(text = paste("log( ddistr(x, ", paste("theta[", 1L:p, "]", collapse = ", "), "))"))
-  qdistr.call <- parse(text = paste("qdistr(p, ",  paste("theta[", 1L:p, "]", collapse = ", "), ")"))
-  
   findMLE.call <- if (dim == 1) parse(text = paste("findMLE(x, ddistr, start = as.list(theta), ...)")) else parse(text = paste("findMLE(x, ddistr, start = list(param=theta), ...)"))
 
-  ## for dim > 1, set up pdistr and rdistr
-  dots <- names(list(...))  ## e.g., dispstr = "ex"
-  pf <- formals(pdistr)
-  pf.args <- names(pf)
-  pf.m <- match(pf.args, dots)
-  pf.m <- match(pf.args, dots)
-  pf.m <- pf.m[!is.na(pf.m)]
+  ## Keep estimated parameters named, and forward fixed distribution arguments.
+  fixed.args <- list(...)
+  fixed.args <- fixed.args[!names(fixed.args) %in% names(formals(optim))]
+  distribution.args <- function(fun, value, parm) {
+    parameters <- if (dim == 1) as.list(parm) else list(parm)
+    fixed <- fixed.args[names(fixed.args) %in% names(formals(fun)) |
+                        "..." %in% names(formals(fun))]
+    c(list(value), parameters, fixed)
+  }
   pdistr.my <- function(x, parm) {
-    if (dim == 1) {
-      ret <- eval(pdistr.call, list(theta=parm, x = x))
-    }
-    else {
-      formals(pdistr)[names(list(...)[pf.m])] <- list(...)[pf.m]
-      ret <- pdistr(x, parm)
-    }
-    ret 
+    do.call(pdistr, distribution.args(pdistr, x, parm))
   }
   ddistr.my <- function(x, parm) {
-    if (dim == 1) {
-      ret <- eval(ddistr.call, list(theta=parm, x = x))
-    }
-    else {
-      formals(ddistr)[names(list(...)[pf.m])] <- list(...)[pf.m]
-      if (log.arg) ret <- ddistr(x, parm, log=TRUE)
-      else ret <- log(ddistr(x, parm))
-    }
-    ret 
+    args <- distribution.args(ddistr, x, parm)
+    if (log.arg) args$log <- TRUE
+    ret <- do.call(ddistr, args)
+    if (log.arg) ret else log(ret)
   }
   rdistr.my <- function(n, parm) {
-    if (dim == 1) {
-      ret <- eval(rdistr.call, list(theta=parm, n = n))
-    }
-    else {
-      formals(rdistr)[names(list(...)[pf.m])] <- list(...)[pf.m]
-      formals(rdistr)$dim <- dim
-      ret <- rdistr(n, parm)
-    }
-    ret 
+    args <- distribution.args(rdistr, n, parm)
+    if (dim > 1 && "dim" %in% names(formals(rdistr))) args$dim <- dim
+    do.call(rdistr, args)
   }
   
   ## generate a grid for numerigal integration if gridStat == TRUE
@@ -152,7 +162,7 @@ gof.test <- function(x, distr, nsim, start,
     ng1 <- ceiling(ng^(1 / dim))
     pgrid <- (1:ng1) / (ng1 + 1)
     if (dim == 1 && qgrid == "fitted") {
-      xglist <- eval(qdistr.call, list(theta = thetahat, p = pgrid))
+      xglist <- do.call(qdistr, distribution.args(qdistr, pgrid, thetahat))
       xg <- as.matrix(expand.grid(xglist))
     }
     else {
@@ -163,8 +173,7 @@ gof.test <- function(x, distr, nsim, start,
   }
   
   ## fxg <- ddistr.my(xg, thetahat) ## not needed
-  if (dim > 1) ecdf <- function(x) mecdf(x, expand = NA, continuous = FALSE)
-  ## need to be careful with mecdf which addes two fake points
+  if (dim > 1) ecdf <- empiricalCdf
   Fn <- ecdf(x)
   Ftheta <- function (x) pdistr.my(x, thetahat)
   
@@ -186,6 +195,8 @@ gof.test <- function(x, distr, nsim, start,
     if (gridStat) {
       stat <- c(getStat(xg, n, Fn.sim, Ftheta.sim), stat)
     }
+    names(stat) <- if (gridStat) c("ks", "cvm", "ksa", "cvma")
+                   else c("ksa", "cvma")
     stat
   }
   logdens <- function(theta) ddistr.my(x, theta)  
@@ -201,12 +212,25 @@ gof.test <- function(x, distr, nsim, start,
     ## if (fisher == "G") hinv <- solve(var(t(grad))) else hinv <- solve( - hessian(llk, theta) / n )
     ## hinv <- solve(var(grad))
     ## psi <- hinv %*% t(grad)
-    psi <- solve(var(grad), t(grad))
+    if (!is.numeric(grad) || !is.matrix(grad) || !identical(dim(grad), c(n, p)) ||
+        any(!is.finite(grad)))
+      stop("log-density derivative must be a finite n by p matrix")
+    psi <- tryCatch(solve(var(grad), t(grad)), error = function(e)
+      stop("cannot invert score covariance: ", conditionMessage(e), call. = FALSE))
     stat.sim <- mult.sim(xg, x, pdistr.my, ddistr.my, thetahat, psi, nsim, gridStat = gridStat, method.args = method.args, derCdfWrtPar = derCdfWrtPar)
   }
 
   p.value <- rowSums(stat.sim >= stat) / (nsim + 1)
   list(statistic = stat, p.value = p.value, estimate = thetahat, stat.sim = stat.sim)
+}
+
+empiricalCdf <- function(x) {
+  x <- as.matrix(x)
+  function(points) {
+    points <- as.matrix(points)
+    vapply(seq_len(NROW(points)), function(i)
+      mean(rowSums(sweep(x, 2, points[i, ], "<=")) == NCOL(x)), numeric(1))
+  }
 }
 
 influFun <- function(xg, x, psi, F, theta, method.args, derCdfWrtPar) {
@@ -223,7 +247,11 @@ influFun <- function(xg, x, psi, F, theta, method.args, derCdfWrtPar) {
   Ftheta <- function(theta) F(xg, theta)
   if (is.null(derCdfWrtPar))
     dF.dtheta <- jacobian(Ftheta, theta, method.args = method.args)
-  else dF.dtheta <- derCdfWrtPar(theta, x)
+  else dF.dtheta <- derCdfWrtPar(theta, xg)
+  if (!is.numeric(dF.dtheta) || !is.matrix(dF.dtheta) ||
+      !identical(dim(dF.dtheta), c(ng, length(theta))) ||
+      any(!is.finite(dF.dtheta)))
+    stop("CDF derivative must be a finite evaluation-point by parameter matrix")
   
   idx1 <- rep(1:n, ng)
   idx2 <- rep(1:ng, each = n)
