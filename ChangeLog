@@ -1,0 +1,29 @@
+2012-05-21  Jun Yan and Ivan Kojadinovic
+
+	* First public release. Main function is for dimension 1.
+
+2012-02-12  Jun Yan and Ivan Kojadinovic
+
+	* Added NAMESPACE.
+
+2011-06-09  Jun Yan and Ivan Kojadinovic
+
+	* Added analytical derCdf and derLogPdf with respect to
+	parameters for the multivariate t distribution.
+	Speed is increased drastically.
+
+2011-06-02  Jun Yan and Ivan Kojadinovic
+
+	* For dim = 1, the grid can be chosen to be either from
+	empirical quantiles or fitted quantiles.
+
+	* To save computing time, gridStat is now an option
+	and default to TRUE. It will report statistics calculated
+	on a grid of size ng.
+
+2011-05-31  Jun Yan and Ivan Kojadinovic
+
+	* Default value of zcenter in mult.sim is set to TRUE.
+
+	* Corrected the calculation of CvM statistics from a grid.
+	The last version used weighted mean instead of mean.
