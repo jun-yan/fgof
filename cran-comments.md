@@ -9,13 +9,16 @@ Additional regression-tested repairs preserve named/fixed distribution
 parameters, evaluate analytical CDF derivatives at the requested points,
 restore the missing multivariate empirical CDF without a dependency, and align
 bootstrap statistic labels. The public signature and return layout are
-unchanged. No new package dependencies or statistical procedures were added.
+unchanged. No runtime dependencies or statistical procedures were added.
+The regression suite uses testthat as a suggested test dependency.
 The maintainer and contact address are unchanged.
 
 ## Local checks
 
 - R 4.6.1, x86_64 macOS Sonoma 14.8.7.
-- Build succeeded. All four base R regression scripts and all examples passed.
+- Build succeeded. The testthat suite, namespace-isolation script, and all
+  examples passed; current infrastructure check results are saved separately
+  from the earlier base R test logs.
 - Supplementary R CMD check --as-cran completed with status OK, including PDF
   and HTML manuals, with incoming checks and remote clock verification disabled.
 - Full incoming feasibility could not run because R could not access CRAN

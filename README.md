@@ -20,7 +20,8 @@ starting values specify parameters to estimate, rather than known parameters.
 
 ## Development
 
-Install the R dependencies `mvtnorm` and `numDeriv`, then run:
+Install the R dependencies `mvtnorm` and `numDeriv`, plus `testthat` for tests,
+then run:
 
 ```sh
 make build    # Create fgof_<version>.tar.gz
@@ -28,7 +29,9 @@ make check    # Build and run R CMD check --as-cran
 make install  # Build and install in the selected R library
 ```
 
-Regression tests use base R and run as part of `R CMD check`. The GitHub Actions
+Regression tests use `testthat` and run as part of `R CMD check`. To run them
+during development, use `Rscript --vanilla -e 'testthat::test_local()'`.
+A separate base R check verifies namespace isolation. The GitHub Actions
 workflow checks macOS, Windows, and Linux, including R-devel and oldrel-1 after
 the repository is pushed. No remote check has been run from this workspace.
 
