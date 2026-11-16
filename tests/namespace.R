@@ -1,0 +1,12 @@
+# A separate R process keeps dependency detachment outside testthat's session.
+library(fgof)
+set.seed(123)
+x <- rlnorm(40, 1, 0.5)
+start <- list(meanlog = 1, sdlog = 0.5)
+set.seed(42)
+attached <- gof.test(x, "lnorm", 3, start, ng = 17)
+detach("package:fgof")
+detach("package:numDeriv")
+detach("package:mvtnorm")
+set.seed(42)
+stopifnot(identical(attached, fgof::gof.test(x, "lnorm", 3, start, ng = 17)))
