@@ -26,15 +26,13 @@ ties, to avoid exact zero and one. The maintainer and contact are unchanged.
   PDF/HTML manuals, with incoming feasibility and remote clock checks disabled.
 - Normal incoming feasibility stopped because R could not resolve repository
   hosts. This limitation is not treated as a successful full check.
-- Commit 55e60d3 passed all five GitHub Actions jobs: Linux release/devel/oldrel-1,
-  macOS release, and Windows release. Linux release ran the full online check
-  including incoming and manuals: zero errors, zero warnings, and three NOTEs.
-  The notes requested Authors@R/title case and identified missing runner tools,
-  in addition to the expected new-submission/archival notice. Metadata and CI
-  tools are now corrected; the final online run must still be reviewed.
-- The corrected metadata also passed local checking with incoming enabled but
-  remote incoming and clock checks disabled (Status: OK). This is not a final
-  online result. Authorship and the maintainer address remain unchanged.
+- Commit ae5e911 passed all five GitHub Actions jobs: Linux release/devel/oldrel-1,
+  macOS release, and Windows release. Linux release ran the full online check,
+  including incoming and PDF/HTML manuals: zero errors, zero warnings, one NOTE.
+  The NOTE is the expected new-submission/previous-archival notice. Its CRAN
+  database comment records the historical scalar-logical issue fixed above.
+- Authors@R and title case have been corrected as requested by incoming checks;
+  author identities and the maintainer address are unchanged.
 - The fresh CRAN package index listed no direct reverse dependencies on fgof
   in Depends, Imports, LinkingTo, Suggests, or Enhances.
 - Paired numerical comparisons covered 75 continuous-model datasets and twelve
@@ -49,6 +47,6 @@ source package builds.
 
 ## Before submission
 
-Complete and review the full online incoming check. Repeat cross-platform CI
-if package source changes, refresh these results, and obtain the maintainer's
+Repeat package and cross-platform checks if source changes, refresh these
+results, and obtain the maintainer's
 explicit approval to submit. No merge, release, or submission has occurred.
