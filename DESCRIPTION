@@ -13,3 +13,5 @@ Description: Goodness-of-fit test with multiplier or parametric
         Implements the procedures of Kojadinovic and Yan (2012)
         <doi:10.1002/cjs.11135>.
 License: GPL (>= 3)
+URL: https://github.com/jun-yan/fgof
+BugReports: https://github.com/jun-yan/fgof/issues
