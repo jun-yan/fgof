@@ -19,6 +19,17 @@
 
 ## Correctness
 
+- Check default multiplier-bootstrap derivatives for both standard and
+  user-defined distributions. Infer parameter scales from log-density changes
+  or reuse supplied optimizer scales; cap steps relative to those scales and
+  tested feasible radii. Check independently selected score and CDF steps for
+  stability and floating-point resolution, retaining the Richardson method.
+- Preserve explicitly supplied `method.args`, analytical derivative callbacks,
+  the parametric bootstrap, and the public function signature and return layout.
+  Numerical functions that are noisy, domain-limited, or unstable can now produce
+  actionable derivative errors instead of unchecked results. The score
+  covariance and influence-matrix formulas are unchanged.
+
 - Use `(count + 0.5) / (nsim + 1)` for bootstrap p-values, as specified by the
   maintainer. This keeps p-values strictly between zero and one and changes
   the archived p-values by `0.5 / (nsim + 1)` without changing bootstrap draws,

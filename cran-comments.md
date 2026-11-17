@@ -1,50 +1,45 @@
 # Draft for fgof 0.2-2: not submitted
 
-This is a revival of fgof 0.2-1, archived on 2022-04-27 because check issues
-were not corrected in time. The archival example failure is resolved by
-normalizing qgrid before scalar conditions; simulation's analogous default
-failure and missing namespace imports are also repaired.
+This revives fgof 0.2-1, archived on 2022-04-27 after check issues were not
+corrected in time. The qgrid and analogous simulation default failures are
+resolved by normalizing choices before scalar conditions. Namespace imports,
+fixed/named parameter forwarding, callback evaluation points, multivariate
+empirical CDF counts, and bootstrap statistic labels are repaired.
 
-Additional regression-tested repairs preserve named/fixed distribution
-parameters, evaluate analytical CDF derivatives at the requested points,
-restore the missing multivariate empirical CDF without a dependency, and align
-bootstrap statistic labels. The public signature and return layout are
-unchanged. No runtime dependencies or statistical procedures were added.
-The regression suite uses testthat as a suggested test dependency.
-The maintainer and contact address are unchanged.
+Default multiplier-bootstrap numerical derivatives now use generic scale,
+feasibility, stability, and representability checks for standard and custom
+models. Explicit numerical controls and analytical callbacks are preserved.
+The public signature and returned structure, optimizer, covariance/influence
+formulas, and bootstrap procedures are unchanged. No runtime dependencies were
+added. Unreliable numerical derivatives can now report an actionable error.
 
-At the maintainer's request, p-values now use (count + 0.5) / (nsim + 1), with
-count including ties. This finite-simulation convention avoids exact zero and
-one. It changes only the reported p-values relative to the archived formula;
-estimates, statistics, and bootstrap draws are unchanged on compatible paths.
+At the maintainer's request, p-values use (count + 0.5) / (nsim + 1), including
+ties, to avoid exact zero and one. The maintainer and contact are unchanged.
 
-## Local checks
+## Executed checks
 
-- R 4.6.1, x86_64 macOS Sonoma 14.8.7.
-- Build succeeded. The testthat suite, namespace-isolation script, and all
-  examples passed; current infrastructure check results are saved separately
-  from the earlier base R test logs.
-- Supplementary R CMD check --as-cran completed with status OK, including PDF
-  and HTML manuals, with incoming checks and remote clock verification disabled.
-- Full incoming feasibility could not run because R could not access CRAN
-  package indexes. This limitation has not been treated as a successful check.
-- The pushed pre-adjustment commit 412f5c4 passed all five GitHub Actions jobs:
-  Windows/macOS release, Linux release/devel/oldrel-1. The p-value adjustment
-  still needs its own pushed CI run.
-- A second supplementary check using current CRAN mvtnorm 1.4.2 also passed.
-  The current CRAN index listed no direct reverse dependencies in Depends,
-  Imports, LinkingTo, Suggests, or Enhances.
-- After the approved p-value adjustment, all 12 testthat cases and 111
-  expectations passed. The supplementary package check again completed with
-  status OK, including tests, examples, and PDF/HTML manuals. Logs are saved
-  under misc/audit/pvalue-adjustment/.
+- R 4.6.1, x86_64 macOS Sonoma 14.8.7, current indexed mvtnorm 1.4-2,
+  numDeriv 2016.8-1.1, and testthat 3.3.2.
+- Build succeeded. All 17 testthat cases and 174 expectations passed without
+  warnings or skips. Namespace isolation and examples passed.
+- Supplementary R CMD check --as-cran completed with Status: OK, including
+  PDF/HTML manuals, with incoming feasibility and remote clock checks disabled.
+- Normal incoming feasibility stopped because R could not resolve repository
+  hosts. This limitation is not treated as a successful full check.
+- The fresh CRAN package index listed no direct reverse dependencies on fgof
+  in Depends, Imports, LinkingTo, Suggests, or Enhances.
+- Paired numerical comparisons covered 75 continuous-model datasets and twelve
+  correlated normal/t datasets, using analytical derivatives and identical
+  multiplier draws. These are numerical validation pilots, not claims of exact
+  finite-sample calibration.
 
-## Before using this draft
+Evidence and complete selected check logs are under
+misc/audit/derivative-integration/. Methodology and limits are described in
+analysis/derivative-scale/INTEGRATION.md; development files are excluded from
+source package builds.
 
-- Complete normal online --as-cran checks with current R and dependencies, and
-  cross-platform checks on the final p-value-adjustment commit.
-- Refresh reverse-dependency inspection and these results before submission.
-- Obtain the maintainer's explicit approval to submit. No submission has occurred.
+## Before submission
 
-The 200-dataset-per-model simulation is a pilot with reported Monte Carlo
-intervals, not a claim of exact finite-sample calibration.
+Complete normal online incoming checks and cross-platform CI on the final
+commits, refresh these results if the source changes, and obtain the maintainer's
+explicit approval to submit. No merge, release, or submission has occurred.

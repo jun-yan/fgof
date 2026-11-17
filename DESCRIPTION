@@ -2,7 +2,7 @@ Package: fgof
 Type: Package
 Title: Fast Goodness-of-fit Test
 Version: 0.2-2
-Date: 2026-11-16
+Date: 2026-11-17
 Author: Ivan Kojadinovic and Jun Yan
 Maintainer: Jun Yan <jun.yan@uconn.edu>
 Depends: mvtnorm, numDeriv
