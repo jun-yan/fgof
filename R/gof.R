@@ -80,6 +80,7 @@ gof.test <- function(x, distr, nsim, start,
 #### distr: character string for the name of the distribution
 #### nsim: bootstrap sample size
 #### start: a named list to be passed to fitdistr
+  automatic.derivatives <- missing(method.args)
   simulation <- match.arg(simulation)
   qgrid <- match.arg(qgrid)
   if (!is.numeric(x) || !(is.null(dim(x)) || is.matrix(x)) ||
@@ -201,11 +202,15 @@ gof.test <- function(x, distr, nsim, start,
   }
   logdens <- function(theta) ddistr.my(x, theta)  
   llk <- function(theta) sum(logdens(theta))
+  if (automatic.derivatives && simulation == "mult" &&
+      (is.null(derLogPdfWrtPar) || is.null(derCdfWrtPar)))
+    attr(method.args, "fgof.evaluator") <- derivativeEvaluator(logdens,
+      parscale = dots$control$parscale)
 
   if (simulation == "pb") stat.sim <- replicate(nsim, pb())
   else {
     if (is.null(derLogPdfWrtPar))
-      grad <- jacobian(logdens, thetahat, method.args = method.args)
+      grad <- numericalJacobian(logdens, thetahat, method.args)
     else grad <- derLogPdfWrtPar(thetahat, x)
     ## a matrix of n by p
     ## hinv <- solve( - hessian(llk, theta) / n ) ## a matrix p by p
@@ -246,7 +251,7 @@ influFun <- function(xg, x, psi, F, theta, method.args, derCdfWrtPar) {
 
   Ftheta <- function(theta) F(xg, theta)
   if (is.null(derCdfWrtPar))
-    dF.dtheta <- jacobian(Ftheta, theta, method.args = method.args)
+    dF.dtheta <- numericalJacobian(Ftheta, theta, method.args)
   else dF.dtheta <- derCdfWrtPar(theta, xg)
   if (!is.numeric(dF.dtheta) || !is.matrix(dF.dtheta) ||
       !identical(dim(dF.dtheta), c(ng, length(theta))) ||
