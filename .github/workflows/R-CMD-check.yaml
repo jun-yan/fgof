@@ -34,8 +34,18 @@ jobs:
           http-user-agent: ${{ matrix.config.http-user-agent }}
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          # V8 is only for R CMD check's HTML math validation.
+          extra-packages: |
+            any::rcmdcheck
+            ${{ matrix.config.incoming && 'any::V8' || '' }}
           needs: check
+      - uses: r-lib/actions/setup-pandoc@v2
+        if: ${{ matrix.config.incoming }}
+      - name: Install HTML validation tools
+        if: ${{ matrix.config.incoming }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tidy
       - uses: r-lib/actions/setup-tinytex@v2
         if: ${{ matrix.config.incoming }}
       - name: Install reference-manual fonts

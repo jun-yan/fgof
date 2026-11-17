@@ -26,10 +26,15 @@ ties, to avoid exact zero and one. The maintainer and contact are unchanged.
   PDF/HTML manuals, with incoming feasibility and remote clock checks disabled.
 - Normal incoming feasibility stopped because R could not resolve repository
   hosts. This limitation is not treated as a successful full check.
-- Commit 67f4971 passed all five GitHub Actions jobs: Linux release/devel/oldrel-1,
-  macOS release, and Windows release. The standard action disabled incoming
-  checks. A follow-up enables full online incoming and manual checks on Linux
-  release; that result must be reviewed before submission.
+- Commit 55e60d3 passed all five GitHub Actions jobs: Linux release/devel/oldrel-1,
+  macOS release, and Windows release. Linux release ran the full online check
+  including incoming and manuals: zero errors, zero warnings, and three NOTEs.
+  The notes requested Authors@R/title case and identified missing runner tools,
+  in addition to the expected new-submission/archival notice. Metadata and CI
+  tools are now corrected; the final online run must still be reviewed.
+- The corrected metadata also passed local checking with incoming enabled but
+  remote incoming and clock checks disabled (Status: OK). This is not a final
+  online result. Authorship and the maintainer address remain unchanged.
 - The fresh CRAN package index listed no direct reverse dependencies on fgof
   in Depends, Imports, LinkingTo, Suggests, or Enhances.
 - Paired numerical comparisons covered 75 continuous-model datasets and twelve

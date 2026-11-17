@@ -2,6 +2,10 @@
 
 ## Compatibility
 
+- Declare author roles through `Authors@R` and correct DESCRIPTION title case,
+  as requested by current incoming checks. Authorship and the maintainer
+  address are unchanged.
+
 - Normalize `simulation` and `qgrid` choices before scalar conditions, restoring
   their documented defaults on current R. Invalid choices now report an error.
 - Import functions used from stats, mvtnorm, and numDeriv so namespace-only calls
