@@ -17,6 +17,8 @@ The default uses centered normal multipliers. Set `simulation = "pb"` for
 parametric bootstrap with refitting. See `help("gof.test")` for statistics,
 parameter constraints, derivative callbacks, and optimizer controls. The
 starting values specify parameters to estimate, rather than known parameters.
+Bootstrap p-values use `(count + 0.5) / (nsim + 1)`, where `count` includes ties,
+so they remain strictly between zero and one.
 
 ## Development
 

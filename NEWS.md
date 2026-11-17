@@ -19,6 +19,10 @@
 
 ## Correctness
 
+- Use `(count + 0.5) / (nsim + 1)` for bootstrap p-values, as specified by the
+  maintainer. This keeps p-values strictly between zero and one and changes
+  the archived p-values by `0.5 / (nsim + 1)` without changing bootstrap draws,
+  observed statistics, or parameter estimates.
 - Preserve parameter names and fixed distribution arguments during fitting,
   CDF/density evaluation, quantile-grid construction, and bootstrap simulation.
   In particular, gamma scale parameters are no longer interpreted as rates.

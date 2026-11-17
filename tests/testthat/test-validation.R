@@ -35,7 +35,7 @@ test_that("one replicate preserves output names and dimensions for both grids", 
                     simulation = method, gridStat = grid, ng = 17)
     expected <- if (grid) c("ks", "cvm", "ksa", "cvma") else c("ksa", "cvma")
     expect_identical(dim(out$stat.sim), c(length(expected), 1L))
-    expect_true(all(out$p.value >= 0 & out$p.value <= 1))
+    expect_true(all(out$p.value > 0 & out$p.value < 1))
     expect_identical(names(out$statistic), expected)
     expect_identical(names(out$p.value), expected)
     expect_identical(rownames(out$stat.sim), expected)
