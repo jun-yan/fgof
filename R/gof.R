@@ -220,7 +220,7 @@ gof.test <- function(x, distr, nsim, start,
     stat.sim <- mult.sim(xg, x, pdistr.my, ddistr.my, thetahat, psi, nsim, gridStat = gridStat, method.args = method.args, derCdfWrtPar = derCdfWrtPar)
   }
 
-  p.value <- rowSums(stat.sim >= stat) / (nsim + 1)
+  p.value <- (rowSums(stat.sim >= stat) + 0.5) / (nsim + 1)
   list(statistic = stat, p.value = p.value, estimate = thetahat, stat.sim = stat.sim)
 }
 

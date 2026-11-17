@@ -120,8 +120,10 @@ gof.test(x, distr, nsim, start,
     \code{ksa}, \code{cvma} when \code{gridStat = TRUE}; otherwise \code{ksa},
     \code{cvma}.}
   \item{p.value}{Named vector of p-values in the same order as \code{statistic}.
-    The archived convention divides the number of bootstrap statistics at least
-    as large as the observed statistic by \code{nsim + 1}.}
+    Computed as \code{(count + 0.5) / (nsim + 1)}, where \code{count} is the
+    number of bootstrap statistics at least as large as the observed statistic.
+    Values lie strictly between zero and one, including when no or all
+    bootstrap statistics exceed the observed statistic.}
   \item{estimate}{vector of estimated parameter values}
   \item{stat.sim}{Matrix of bootstrap draws with one named row per statistic
     and \code{nsim} columns.}
