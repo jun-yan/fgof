@@ -20,7 +20,7 @@ jobs:
         config:
           - {os: macos-latest, r: 'release'}
           - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-latest, r: 'release'}
+          - {os: ubuntu-latest, r: 'release', incoming: true}
           - {os: ubuntu-latest, r: 'devel', http-user-agent: 'release'}
           - {os: ubuntu-latest, r: 'oldrel-1'}
     env:
@@ -36,6 +36,42 @@ jobs:
         with:
           extra-packages: any::rcmdcheck
           needs: check
-      - uses: r-lib/actions/check-r-package@v2
+      - uses: r-lib/actions/setup-tinytex@v2
+        if: ${{ matrix.config.incoming }}
+      - name: Install reference-manual fonts
+        if: ${{ matrix.config.incoming }}
+        run: |
+          tlmgr update --self
+          tlmgr install inconsolata helvetic times courier ec
+      - name: Check package
+        if: ${{ !matrix.config.incoming }}
+        uses: r-lib/actions/check-r-package@v2
         with:
           build_args: 'c("--no-manual")'
+          upload-results: 'true'
+      - name: Full CRAN check including incoming
+        if: ${{ matrix.config.incoming }}
+        env:
+          _R_CHECK_CRAN_INCOMING_: 'true'
+          _R_CHECK_CRAN_INCOMING_REMOTE_: 'true'
+          _R_CHECK_FORCE_SUGGESTS_: 'true'
+          _R_CHECK_SYSTEM_CLOCK_: 'true'
+        run: make check
+      - name: Enforce warning-free full check
+        if: ${{ matrix.config.incoming }}
+        shell: Rscript {0}
+        run: |
+          pkg <- read.dcf("DESCRIPTION")[1, "Package"]
+          status <- grep("^Status:", readLines(file.path(paste0(pkg, ".Rcheck"), "00check.log")), value = TRUE)
+          if (length(status) != 1L || grepl("ERROR|WARNING", status)) {
+            stop("Full R CMD check did not finish without errors and warnings.")
+          }
+          cat(status, "\n")
+      - name: Upload full CRAN check and tarball
+        if: ${{ always() && matrix.config.incoming }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: CRAN-incoming-linux-release
+          path: |
+            fgof.Rcheck/
+            fgof_*.tar.gz
