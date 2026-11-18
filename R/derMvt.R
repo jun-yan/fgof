@@ -11,9 +11,9 @@ plackettFormula <- function(dim, df, rho, s, m, x, i, j)
     term <- 1 + (x[i]^2 + x[j]^2 - 2 * rho * x[i] * x[j]) / (df * (1 - rho^2))
     term^(-df / 2) / (2 * pi * sqrt(1 - rho^2)) *
       if (dim == 3)
-        pt(drop((x[-c(i,j)] - m %*% x[c(i,j)]) / sqrt(term * s)), df= df)
+        stats::pt(drop((x[-c(i,j)] - m %*% x[c(i,j)]) / sqrt(term * s)), df= df)
       else
-        pmvt(df = df, upper = drop((x[-c(i,j)] - m %*% x[c(i,j)]) / sqrt(term)),
+        mvtnorm::pmvt(df = df, upper = drop((x[-c(i,j)] - m %*% x[c(i,j)]) / sqrt(term)),
              sigma = s)
   }
 
@@ -38,7 +38,7 @@ gradCdfT <- function(param, x, df)
     if (dim == 2)
       {
         rho <- param[5]
-        mat[,j] <-  dt(x[,j], df=df) * pt(sqrt((df+1)/(df+x[,j]^2)) / sqrt(1 - rho^2)
+        mat[,j] <-  stats::dt(x[,j], df=df) * stats::pt(sqrt((df+1)/(df+x[,j]^2)) / sqrt(1 - rho^2)
                                 * (x[,-j] - rho * x[,j]), df=df+1)
       }
     else
@@ -46,7 +46,7 @@ gradCdfT <- function(param, x, df)
         
         s <- sigma[-j,-j] - sigma[-j,j,drop=FALSE] %*% sigma[j,-j,drop=FALSE]
         for (i in 1:n)
-          mat[i,j] <- dt(x[i,j], df=df) * pmvt(upper = drop(sqrt((df+1)/(df+x[i,j]^2)) *
+          mat[i,j] <- stats::dt(x[i,j], df=df) * mvtnorm::pmvt(upper = drop(sqrt((df+1)/(df+x[i,j]^2)) *
                                                  (x[i,-j] - x[i,j] * sigma[-j,j])),
                                    sigma = s, df = df + 1)
       }

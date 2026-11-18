@@ -208,6 +208,6 @@ derivativeEvaluator <- function(logdens, parscale = NULL) {
 
 numericalJacobian <- function(func, theta, method.args) {
   evaluator <- attr(method.args, "fgof.evaluator", exact = TRUE)
-  if (is.null(evaluator)) jacobian(func, theta, method.args = method.args)
+  if (is.null(evaluator)) numDeriv::jacobian(func, theta, method.args = method.args)
   else evaluator(func, theta, method.args)
 }

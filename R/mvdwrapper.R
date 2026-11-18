@@ -26,13 +26,13 @@ param2args <- function(param, dispstr, dim) {
 dmymvnorm <- function(x, param, dispstr, log=FALSE) {
   dim <- NCOL(x)
   myargs <- param2args(param, dispstr, dim)
-  val <- try(dmvnorm(x, myargs$mean, myargs$sigma, log))
+  val <- try(mvtnorm::dmvnorm(x, myargs$mean, myargs$sigma, log))
   if (!inherits(val, "try-error")) val else NaN
 }
 
 rmymvnorm <- function(n, param, dispstr, dim) {
   myargs <- param2args(param, dispstr, dim)
-  rmvnorm(n, myargs$mean, myargs$sigma)
+  mvtnorm::rmvnorm(n, myargs$mean, myargs$sigma)
 }
   
 ## pmymvnorm <- function(x, param, dispstr, seed = 123) {
@@ -51,21 +51,21 @@ rmymvnorm <- function(n, param, dispstr, dim) {
 pmymvnorm <- function(x, param, dispstr) {
   dim <- NCOL(x)
   myargs <- param2args(param, dispstr, dim)
-  algr <- if(dim == 2) GenzBretz() else TVPACK()
-  apply(x, 1, function(x) pmvnorm(upper = x, mean = myargs$mean, sigma = myargs$sigma,
+  algr <- if(dim == 2) mvtnorm::GenzBretz() else mvtnorm::TVPACK()
+  apply(x, 1, function(x) mvtnorm::pmvnorm(upper = x, mean = myargs$mean, sigma = myargs$sigma,
                                   algorithm = algr))
 }
 
 dmymvt <- function(x, param, dispstr, df, log=FALSE) {
   dim <- NCOL(x)
   myargs <- param2args(param, dispstr, dim)
-  val <- try(dmvt(x, delta = myargs$mean, sigma = myargs$sigma, df = df, log = log, type = "shifted"))
+  val <- try(mvtnorm::dmvt(x, delta = myargs$mean, sigma = myargs$sigma, df = df, log = log, type = "shifted"))
   if (!inherits(val, "try-error")) val else NaN
 }
 
 rmymvt <- function(n, param, dispstr, df, dim) {
   myargs <- param2args(param, dispstr, dim)
-  rmvt(n, sigma = myargs$sigma, df = df, delta = myargs$mean, type = "shifted")
+  mvtnorm::rmvt(n, sigma = myargs$sigma, df = df, delta = myargs$mean, type = "shifted")
 }
   
 ## pmymvt <- function(x, param, dispstr, df, seed = 123) {
@@ -84,8 +84,8 @@ rmymvt <- function(n, param, dispstr, df, dim) {
 pmymvt <- function(x, param, dispstr, df) {
   dim <- NCOL(x)
   myargs <- param2args(param, dispstr, dim)
-  algr <- if(dim == 2) GenzBretz() else TVPACK(1e-12)
-  apply(x, 1, function(x) pmvt(upper = x, df = df, delta = myargs$mean,
+  algr <- if(dim == 2) mvtnorm::GenzBretz() else mvtnorm::TVPACK(1e-12)
+  apply(x, 1, function(x) mvtnorm::pmvt(upper = x, df = df, delta = myargs$mean,
                                sigma = myargs$sigma, type = "shifted",
                                algorithm = algr))
 }
