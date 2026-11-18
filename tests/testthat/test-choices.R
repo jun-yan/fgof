@@ -27,5 +27,5 @@ test_that("both bootstrap methods reproduce seeded results and return layout", {
   }
   expect_identical(names(formals(gof.test)),
     c("x", "distr", "nsim", "start", "simulation", "ng", "qgrid", "gridStat",
-      "method.args", "derCdfWrtPar", "derLogPdfWrtPar", "..."))
+      "numDeriv.args", "derCdfWrtPar", "derLogPdfWrtPar", "distr.args", "optim.args"))
 })

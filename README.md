@@ -27,8 +27,13 @@ remotes::install_github("jun-yan/fgof", upgrade = "never")
 
 The default uses centered normal multipliers. Set `simulation = "pb"` for
 parametric bootstrap with refitting. See `help("gof.test")` for statistics,
-parameter constraints, derivative callbacks, and optimizer controls. The
-starting values specify parameters to estimate, rather than known parameters.
+parameter constraints, derivative callbacks, and optimizer controls. Fixed
+distribution arguments and optimizer settings use separate named lists. For
+example, `distr.args = list(sd = 2)` fixes the standard deviation in a normal
+model, while `optim.args = list(method = "BFGS")` selects the optimizer method.
+`numDeriv.args` separately controls numerical differentiation by `numDeriv`.
+The starting values specify parameters to estimate, rather than known
+parameters.
 Bootstrap p-values use `(count + 0.5) / (nsim + 1)`, where `count` includes ties,
 so they remain strictly between zero and one.
 
@@ -62,7 +67,7 @@ The package is licensed under GPL (>= 3).
 
 ## Numerical differentiation
 
-With `method.args` omitted, the multiplier bootstrap checks derivatives for
+With `numDeriv.args` omitted, the multiplier bootstrap checks derivatives for
 standard and user-defined models using the same generic procedure. It infers
 local parameter scales from log-density changes or uses an existing optimizer
 `control$parscale`. Steps are limited by a relative cap and tested feasible
@@ -70,7 +75,7 @@ radii, then checked for stability separately for the score and CDF. Functions
 must give deterministic values. Unreliable derivatives produce an error with
 suggested alternatives.
 
-Explicit `method.args` retains the previous numDeriv behavior and bypasses the
+Explicit `numDeriv.args` retains the previous numDeriv behavior and bypasses the
 automatic checks. For example, `list(d = 0, eps = unname(h), zero.tol = Inf,
 r = 6)` supplies absolute initial steps. Give exactly one positive entry in `h`
 per estimated parameter in density argument order; names do not align entries.

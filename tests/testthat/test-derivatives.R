@@ -20,9 +20,10 @@ test_that("automatic derivatives work for custom models at difficult scales", {
     x <- rnorm(80, theta[1], theta[2])
     args <- list(x = x, distr = "fgofderiv", nsim = 19, ng = 17,
       start = list(a = theta[1], b = theta[2]),
-      lower = c(theta[1] - 10 * theta[2], theta[2] / 100),
-      upper = c(theta[1] + 10 * theta[2], theta[2] * 100),
-      control = list(parscale = rep(theta[2], 2), maxit = 2000, factr = 1e4))
+      optim.args = list(
+        lower = c(theta[1] - 10 * theta[2], theta[2] / 100),
+        upper = c(theta[1] + 10 * theta[2], theta[2] * 100),
+        control = list(parscale = rep(theta[2], 2), maxit = 2000, factr = 1e4)))
     set.seed(950009)
     reference <- do.call(gof.test, c(args,
       list(derLogPdfWrtPar = score, derCdfWrtPar = cdf)))
@@ -39,7 +40,7 @@ test_that("automatic derivatives work for custom models at difficult scales", {
     }
     # An explicit request retains the legacy numerical path, including failures.
     if (theta[1] == 0) expect_error(suppressWarnings(do.call(gof.test,
-      c(args, list(method.args = fgof:::gradControl())))), "finite n by p")
+      c(args, list(numDeriv.args = fgof:::gradControl())))), "finite n by p")
   }
 })
 
@@ -53,7 +54,7 @@ test_that("ordinary numerical results and parametric bootstrap remain compatible
     seed <- .Random.seed
     set.seed(942)
     explicit <- gof.test(x, "norm", 7, list(mean = 0.5, sd = 1.2),
-      simulation = simulation, ng = 17, method.args = fgof:::gradControl())
+      simulation = simulation, ng = 17, numDeriv.args = fgof:::gradControl())
     expect_identical(automatic, explicit)
     expect_identical(.Random.seed, seed)
   }
@@ -68,8 +69,9 @@ test_that("fixed spread and valid zero locations have automatic derivative scale
   set.seed(943)
   x <- rnorm(80, 0, 1e-6)
   args <- list(x = x, distr = "norm", nsim = 19, start = list(mean = 0),
-    sd = 1e-6, ng = 17, lower = -1e-5, upper = 1e-5,
-    control = list(parscale = 1e-6))
+    distr.args = list(sd = 1e-6), ng = 17,
+    optim.args = list(lower = -1e-5, upper = 1e-5,
+      control = list(parscale = 1e-6)))
   set.seed(944)
   reference <- do.call(gof.test, c(args, list(
     derLogPdfWrtPar = function(theta, points) matrix((points[, 1] - theta[1]) / 1e-12, ncol = 1),
@@ -136,7 +138,7 @@ test_that("correlated vector-parameter models retain analytical agreement", {
   set.seed(946)
   x <- mvtnorm::rmvnorm(60, sigma = sigma(0.3))
   args <- list(x = x, distr = "fgofcorr", nsim = 9, start = list(param = 0.3),
-    lower = -0.8, upper = 0.8, gridStat = FALSE)
+    optim.args = list(lower = -0.8, upper = 0.8), gridStat = FALSE)
   set.seed(947)
   reference <- do.call(gof.test, c(args,
     list(derLogPdfWrtPar = score, derCdfWrtPar = cdf)))

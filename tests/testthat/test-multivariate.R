@@ -24,9 +24,10 @@ test_that("both bivariate bootstrap paths return finite statistics", {
   for (method in c("mult", "pb")) {
     set.seed(34)
     out <- gof.test(x, "mymvnorm", 2, list(param = c(0, 0, 1, 1, 0)),
-                    simulation = method, dispstr = "un",
-                    lower = c(-5, -5, 0.1, 0.1, -0.9),
-                    upper = c(5, 5, 5, 5, 0.9))
+                    simulation = method,
+                    distr.args = list(dispstr = "un"),
+                    optim.args = list(lower = c(-5, -5, 0.1, 0.1, -0.9),
+                                      upper = c(5, 5, 5, 5, 0.9)))
     expect_true(all(is.finite(unlist(out))))
     expect_identical(dim(out$stat.sim), c(2L, 2L))
   }

@@ -4,14 +4,25 @@
 
 
 #### get MLE
-findMLE <- function(x, densfun, start, ...) {
+findMLE <- function(x, densfun, start, distr.args = list(), optim.args = list()) {
   if (missing(densfun) || !(is.function(densfun)) )
     stop("'densfun' must be supplied as a function")
+  if (!is.list(distr.args) ||
+      (length(distr.args) > 0L &&
+       (is.null(names(distr.args)) || anyNA(names(distr.args)) ||
+        any(names(distr.args) == "") || anyDuplicated(names(distr.args)))))
+    stop("'distr.args' must be a list with unique, nonempty names")
+  if (!is.list(optim.args) ||
+      (length(optim.args) > 0L &&
+       (is.null(names(optim.args)) || anyNA(names(optim.args)) ||
+        any(names(optim.args) == "") || anyDuplicated(names(optim.args)))))
+    stop("'optim.args' must be a list with unique, nonempty names")
+  if (any(names(optim.args) %in% c("par", "fn")))
+    stop("'optim.args' cannot set 'par' or 'fn'")
+  if (any(names(distr.args) %in% names(start)))
+    stop("'distr.args' cannot repeat parameters estimated in 'start'")
   log.arg <- "log" %in% names(formals(densfun))
   n <- NROW(x)
-  
-  myfn <- function(parm, ...) -sum(log(dens(parm, ...)))
-  mylogfn <- function(parm, ...) -sum(dens(parm, ..., log = TRUE))
 
   ## correct the order of start to match the argument order in densfun
   nm <- names(start)
@@ -27,31 +38,24 @@ findMLE <- function(x, densfun, start, ...) {
 
   ## assuming for multivariate distribution, the parameters are stored
   ## in one parameter vector (e.g., param in dmymvnorm)
-  dens <- function(parm, x, ...) {
+  dens <- function(parm) {
     parameters <- if (length(nm) == 1L) stats::setNames(list(parm), nm)
                   else stats::setNames(as.list(parm), nm)
-    do.call(densfun, c(list(x), parameters, list(...)))
-  }
-  
-  Call <- match.call(expand.dots = TRUE)
-  Call[[1L]] <- quote(stats::optim)
-  Call$densfun <- Call$start <- Call$x <- NULL
-  Call$fn <- if ("log" %in% args) mylogfn else myfn
-  Call$par <- start
-  Call$x <- x
-  ## Call$control <- list(maxit=20000) ## should not be hard coded as this.
-
-  ## Call$hessian <- TRUE
-  if (is.null(Call$method)) {
-    if (any(c("lower", "upper") %in% names(Call))) 
-      Call$method <- "L-BFGS-B"
-##    else if (length(start) > 1L) 
-##      Call$method <- "BFGS"
-##    else if (length(start) == 1) Call$method <- "Brent"
-    else Call$method <- "Nelder-Mead" ## for dim > 1, this works better
+    call.args <- c(list(x), parameters, distr.args)
+    if (log.arg) call.args$log <- TRUE
+    do.call(densfun, call.args)
   }
 
-  res <- eval.parent(Call)
+  objective <- if (log.arg) {
+    function(parm) -sum(dens(parm))
+  } else {
+    function(parm) -sum(log(dens(parm)))
+  }
+  if (is.null(optim.args$method)) {
+    optim.args$method <- if (any(c("lower", "upper") %in% names(optim.args)))
+      "L-BFGS-B" else "Nelder-Mead"
+  }
+  res <- do.call(stats::optim, c(list(par = start, fn = objective), optim.args))
   if (res$convergence > 0L) 
     stop("optimization failed")
   ## sds <- sqrt(diag(solve(res$hessian)))
@@ -78,12 +82,19 @@ gradControl <- function(eps=1e-4, d=0.0001,
 ##' @param ng Target number of grid points.
 ##' @param qgrid Grid construction method: empirical or fitted quantiles.
 ##' @param gridStat Whether to compute grid-based statistics in addition to observation-based statistics.
-##' @param method.args Numerical Jacobian controls. Omission selects automatic step checks; explicit values are forwarded to numDeriv.
+##' @param numDeriv.args Numerical Jacobian controls passed to \code{numDeriv}. Omission selects automatic step checks; explicit values are forwarded unchanged.
 ##' @param derCdfWrtPar Optional CDF derivative callback.
 ##' @param derLogPdfWrtPar Optional log-density derivative callback.
-##' @param ... Fixed distribution arguments and optimizer arguments.
+##' @param distr.args Named list of fixed arguments passed to the distribution functions.
+##' @param optim.args Named list of arguments passed to \code{stats::optim}, such as \code{method}, \code{lower}, \code{upper}, and \code{control}.
 ##' @rawRd
 ##' \details{
+##'   Fixed distribution parameters belong in \code{distr.args}; optimizer
+##'   settings belong in \code{optim.args}. Both are named lists. For example,
+##'   use \code{distr.args = list(sd = 2)} to fix a normal standard deviation
+##'   and \code{optim.args = list(method = "BFGS")} to choose an optimizer
+##'   method. Parameters listed in \code{start} are estimated and must not
+##'   also appear in \code{distr.args}.
 ##'   Observations are assumed independent and identically distributed from a
 ##'   continuous distribution. Parameters in \code{start} are fitted by maximum
 ##'   likelihood. The optimizer defaults to Nelder-Mead, or L-BFGS-B when bounds
@@ -94,7 +105,8 @@ gradControl <- function(eps=1e-4, d=0.0001,
 ##'   Automatic numerical differentiation applies to standard and user-defined
 ##'   distributions alike. Parameter scales are inferred from two-sided changes
 ##'   in the fitted log density, or taken from the absolute optimizer
-##'   \code{control$parscale} values when supplied. These are numerical scales,
+##'   \code{control$parscale} values supplied in \code{optim.args}. These are
+##'   numerical scales,
 ##'   not parameter standard errors. A separate feasible radius records finite
 ##'   log-density probes; optimizer bounds do not by themselves define this radius.
 ##'   Candidate steps cannot exceed either that radius or 10 percent of the scale.
@@ -197,15 +209,16 @@ gof.test <- function(x, distr, nsim, start,
                      ng = 1000,
                      qgrid = c("empirical", "fitted"), ## only matters for dim = 1
                      gridStat = NULL,  ## for CvM statistics, dim >= 2
-                     method.args = gradControl(), ## for jacobian,
+                     numDeriv.args = gradControl(), ## for jacobian,
                      derCdfWrtPar = NULL,         ## function dF.dTheta(theta, x)
                      derLogPdfWrtPar = NULL,      ## function dlogf.dTheta(theta, x)
-                     ...) {
+                     distr.args = list(),
+                     optim.args = list()) {
 #### x: the data vector to be tested
 #### distr: character string for the name of the distribution
 #### nsim: bootstrap sample size
 #### start: a named list to be passed to fitdistr
-  automatic.derivatives <- missing(method.args)
+  automatic.derivatives <- missing(numDeriv.args)
   simulation <- match.arg(simulation)
   qgrid <- match.arg(qgrid)
   if (!is.numeric(x) || !(is.null(dim(x)) || is.matrix(x)) ||
@@ -233,11 +246,26 @@ gof.test <- function(x, distr, nsim, start,
   for (fun in list(derCdfWrtPar, derLogPdfWrtPar))
     if (!is.null(fun) && !is.function(fun))
       stop("derivative callbacks must be functions or NULL")
-  if (!is.list(method.args))
-    stop("'method.args' must be a list; supply it explicitly when passing optim's 'method'")
-  dots <- list(...)
-  if (length(dots) > 0L && (is.null(names(dots)) || any(names(dots) == "")))
-    stop("arguments in '...' must be named")
+  if (!is.list(numDeriv.args))
+    stop("'numDeriv.args' must be a list")
+  if (!is.list(distr.args) ||
+      (length(distr.args) > 0L &&
+       (is.null(names(distr.args)) || anyNA(names(distr.args)) ||
+        any(names(distr.args) == "") || anyDuplicated(names(distr.args)))))
+    stop("'distr.args' must be a list with unique, nonempty names")
+  if (!is.list(optim.args) ||
+      (length(optim.args) > 0L &&
+       (is.null(names(optim.args)) || anyNA(names(optim.args)) ||
+        any(names(optim.args) == "") || anyDuplicated(names(optim.args)))))
+    stop("'optim.args' must be a list with unique, nonempty names")
+  if (any(names(optim.args) %in% c("par", "fn")))
+    stop("'optim.args' cannot set 'par' or 'fn'")
+  if (any(names(distr.args) %in% names(start)))
+    stop("'distr.args' cannot repeat parameters estimated in 'start'")
+  supported.optim.args <- setdiff(names(formals(stats::optim)), "...")
+  invalid.optim.args <- setdiff(names(optim.args), supported.optim.args)
+  if (length(invalid.optim.args))
+    stop("unsupported 'optim.args': ", paste(invalid.optim.args, collapse = ", "))
   n <- NROW(x)
   dim <- NCOL(x)
   if (is.null(gridStat)) gridStat <- if (dim == 1) TRUE else FALSE
@@ -250,34 +278,35 @@ gof.test <- function(x, distr, nsim, start,
   
   if (!is.matrix(x)) x <- as.matrix(x)
   ## estimation
-  fit <- findMLE(x, ddistr, start, ...)
+  fit <- findMLE(x, ddistr, start, distr.args, optim.args)
   
   thetahat <- fit$estimate
   p <- length(thetahat)
   log.arg <- "log" %in% names(formals(ddistr))
   
-  findMLE.call <- if (dim == 1) parse(text = paste("findMLE(x, ddistr, start = as.list(theta), ...)")) else parse(text = paste("findMLE(x, ddistr, start = list(param=theta), ...)"))
+  refit <- function(data, theta) {
+    initial <- if (dim == 1L) as.list(theta) else list(param = theta)
+    findMLE(data, ddistr, initial, distr.args, optim.args)$estimate
+  }
 
-  ## Keep estimated parameters named, and forward fixed distribution arguments.
-  fixed.args <- list(...)
-  fixed.args <- fixed.args[!names(fixed.args) %in% names(formals(stats::optim))]
-  distribution.args <- function(fun, value, parm) {
+  ## Forward only arguments accepted by each distribution function.
+  dist_call_args <- function(fun, value, parm) {
     parameters <- if (dim == 1) as.list(parm) else list(parm)
-    fixed <- fixed.args[names(fixed.args) %in% names(formals(fun)) |
+    fixed <- distr.args[names(distr.args) %in% names(formals(fun)) |
                         "..." %in% names(formals(fun))]
     c(list(value), parameters, fixed)
   }
   pdistr.my <- function(x, parm) {
-    do.call(pdistr, distribution.args(pdistr, x, parm))
+    do.call(pdistr, dist_call_args(pdistr, x, parm))
   }
   ddistr.my <- function(x, parm) {
-    args <- distribution.args(ddistr, x, parm)
+    args <- dist_call_args(ddistr, x, parm)
     if (log.arg) args$log <- TRUE
     ret <- do.call(ddistr, args)
     if (log.arg) ret else log(ret)
   }
   rdistr.my <- function(n, parm) {
-    args <- distribution.args(rdistr, n, parm)
+    args <- dist_call_args(rdistr, n, parm)
     if (dim > 1 && "dim" %in% names(formals(rdistr))) args$dim <- dim
     do.call(rdistr, args)
   }
@@ -288,7 +317,7 @@ gof.test <- function(x, distr, nsim, start,
     ng1 <- ceiling(ng^(1 / dim))
     pgrid <- (1:ng1) / (ng1 + 1)
     if (dim == 1 && qgrid == "fitted") {
-      xglist <- do.call(qdistr, distribution.args(qdistr, pgrid, thetahat))
+      xglist <- do.call(qdistr, dist_call_args(qdistr, pgrid, thetahat))
       xg <- as.matrix(expand.grid(xglist))
     }
     else {
@@ -314,7 +343,7 @@ gof.test <- function(x, distr, nsim, start,
 
   pb <- function() {
     x.sim <- rdistr.my(n, thetahat)
-    theta.sim <- eval(findMLE.call, list(theta = thetahat, x = x.sim))$estimate
+    theta.sim <- refit(x.sim, thetahat)
     Fn.sim <- stats::ecdf(x.sim)
     Ftheta.sim <- function(x) pdistr.my(x, theta.sim)
     stat <- getStat(x.sim, n, Fn.sim, Ftheta.sim)
@@ -328,14 +357,16 @@ gof.test <- function(x, distr, nsim, start,
   logdens <- function(theta) ddistr.my(x, theta)  
   llk <- function(theta) sum(logdens(theta))
   if (automatic.derivatives && simulation == "mult" &&
-      (is.null(derLogPdfWrtPar) || is.null(derCdfWrtPar)))
-    attr(method.args, "fgof.evaluator") <- derivativeEvaluator(logdens,
-      parscale = dots$control$parscale)
+      (is.null(derLogPdfWrtPar) || is.null(derCdfWrtPar))) {
+    parscale <- if (is.list(optim.args$control)) optim.args$control$parscale else NULL
+    attr(numDeriv.args, "fgof.evaluator") <- derivativeEvaluator(logdens,
+      parscale = parscale)
+  }
 
   if (simulation == "pb") stat.sim <- replicate(nsim, pb())
   else {
     if (is.null(derLogPdfWrtPar))
-      grad <- numericalJacobian(logdens, thetahat, method.args)
+      grad <- numericalJacobian(logdens, thetahat, numDeriv.args)
     else grad <- derLogPdfWrtPar(thetahat, x)
     ## a matrix of n by p
     ## hinv <- solve( - hessian(llk, theta) / n ) ## a matrix p by p
@@ -347,7 +378,7 @@ gof.test <- function(x, distr, nsim, start,
       stop("log-density derivative must be a finite n by p matrix")
     psi <- tryCatch(solve(stats::var(grad), t(grad)), error = function(e)
       stop("cannot invert score covariance: ", conditionMessage(e), call. = FALSE))
-    stat.sim <- mult.sim(xg, x, pdistr.my, ddistr.my, thetahat, psi, nsim, gridStat = gridStat, method.args = method.args, derCdfWrtPar = derCdfWrtPar)
+    stat.sim <- mult.sim(xg, x, pdistr.my, ddistr.my, thetahat, psi, nsim, gridStat = gridStat, method.args = numDeriv.args, derCdfWrtPar = derCdfWrtPar)
   }
 
   p.value <- (rowSums(stat.sim >= stat) + 0.5) / (nsim + 1)
