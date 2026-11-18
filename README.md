@@ -34,17 +34,15 @@ make install  # Build and install in the selected R library
 Regression tests use `testthat` and run as part of `R CMD check`. To run them
 during development, use `Rscript --vanilla -e 'testthat::test_local()'`.
 A separate base R check verifies namespace isolation. The GitHub Actions
-workflow checks macOS, Windows, and Linux, including R-devel and oldrel-1 after
-the repository is pushed. No remote check has been run from this workspace.
+workflow checks macOS, Windows, and Linux, including R-devel and oldrel-1 when
+changes are pushed.
 
-## Revival records
+## Repository scope
 
-- [Initial source audit](REVIVAL_AUDIT.md)
-- [Revival progress and remaining requirements](REVIVAL_REPORT.md)
-- [Recovery provenance and original source](misc/recovery/README.md)
-- [Methodological decisions](misc/validation/methodology.md)
-- [Validation scripts and results](misc/validation/README.md)
-- [Changes](NEWS.md)
+This repository contains the R package, documentation, routine tests, and CI.
+Supporting investigations, benchmarks, recovery archives, and manuscript assets
+are maintained separately under the untracked local `investigation/` directory.
+See [NEWS.md](NEWS.md) for package changes.
 
 The original statistical procedures are described by
 [Kojadinovic and Yan (2012)](https://doi.org/10.1002/cjs.11135).

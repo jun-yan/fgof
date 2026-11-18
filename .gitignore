@@ -14,3 +14,9 @@
 .RData
 .Rproj.user/
 .DS_Store
+/investigation/
+/analysis/
+/misc/
+/REVIVAL_AUDIT.md
+/REVIVAL_REPORT.md
+/NUMERICAL_DERIVATIVES_AUDIT.md
