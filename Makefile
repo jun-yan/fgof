@@ -2,7 +2,10 @@ pkg := $(shell sed -n 's/^Package: *//p' DESCRIPTION)
 version := $(shell sed -n 's/^Version: *//p' DESCRIPTION)
 tar := $(pkg)_$(version).tar.gz
 
-.PHONY: build check install
+.PHONY: document build check install
+
+document:
+	Rscript -e "devtools::document()"
 
 build:
 	R CMD build .
