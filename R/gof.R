@@ -28,13 +28,13 @@ findMLE <- function(x, densfun, start, ...) {
   ## assuming for multivariate distribution, the parameters are stored
   ## in one parameter vector (e.g., param in dmymvnorm)
   dens <- function(parm, x, ...) {
-    parameters <- if (length(nm) == 1L) setNames(list(parm), nm)
-                  else setNames(as.list(parm), nm)
+    parameters <- if (length(nm) == 1L) stats::setNames(list(parm), nm)
+                  else stats::setNames(as.list(parm), nm)
     do.call(densfun, c(list(x), parameters, list(...)))
   }
   
   Call <- match.call(expand.dots = TRUE)
-  Call[[1L]] <- as.name("optim")
+  Call[[1L]] <- quote(stats::optim)
   Call$densfun <- Call$start <- Call$x <- NULL
   Call$fn <- if ("log" %in% args) mylogfn else myfn
   Call$par <- start
@@ -191,9 +191,6 @@ gradControl <- function(eps=1e-4, d=0.0001,
 ##' }
 ##' @rawRd
 ##' \keyword{ htest }
-##' @importFrom stats dt ecdf optim pt quantile rnorm setNames var
-##' @importFrom mvtnorm dmvnorm dmvt GenzBretz pmvnorm pmvt rmvnorm rmvt TVPACK
-##' @importFrom numDeriv jacobian
 ##' @export
 gof.test <- function(x, distr, nsim, start,
                      simulation = c("mult", "pb"),
@@ -263,7 +260,7 @@ gof.test <- function(x, distr, nsim, start,
 
   ## Keep estimated parameters named, and forward fixed distribution arguments.
   fixed.args <- list(...)
-  fixed.args <- fixed.args[!names(fixed.args) %in% names(formals(optim))]
+  fixed.args <- fixed.args[!names(fixed.args) %in% names(formals(stats::optim))]
   distribution.args <- function(fun, value, parm) {
     parameters <- if (dim == 1) as.list(parm) else list(parm)
     fixed <- fixed.args[names(fixed.args) %in% names(formals(fun)) |
@@ -296,14 +293,14 @@ gof.test <- function(x, distr, nsim, start,
     }
     else {
       xglist <- list()
-      for (i in 1:NCOL(x)) xglist[[i]] <- quantile(x[,i], prob = pgrid)
+      for (i in 1:NCOL(x)) xglist[[i]] <- stats::quantile(x[,i], prob = pgrid)
       xg <- as.matrix(expand.grid(xglist))
     }
   }
   
   ## fxg <- ddistr.my(xg, thetahat) ## not needed
   if (dim > 1) ecdf <- empiricalCdf
-  Fn <- ecdf(x)
+  Fn <- stats::ecdf(x)
   Ftheta <- function (x) pdistr.my(x, thetahat)
   
   ## test statistics
@@ -318,7 +315,7 @@ gof.test <- function(x, distr, nsim, start,
   pb <- function() {
     x.sim <- rdistr.my(n, thetahat)
     theta.sim <- eval(findMLE.call, list(theta = thetahat, x = x.sim))$estimate
-    Fn.sim <- ecdf(x.sim)
+    Fn.sim <- stats::ecdf(x.sim)
     Ftheta.sim <- function(x) pdistr.my(x, theta.sim)
     stat <- getStat(x.sim, n, Fn.sim, Ftheta.sim)
     if (gridStat) {
@@ -348,7 +345,7 @@ gof.test <- function(x, distr, nsim, start,
     if (!is.numeric(grad) || !is.matrix(grad) || !identical(dim(grad), c(n, p)) ||
         any(!is.finite(grad)))
       stop("log-density derivative must be a finite n by p matrix")
-    psi <- tryCatch(solve(var(grad), t(grad)), error = function(e)
+    psi <- tryCatch(solve(stats::var(grad), t(grad)), error = function(e)
       stop("cannot invert score covariance: ", conditionMessage(e), call. = FALSE))
     stat.sim <- mult.sim(xg, x, pdistr.my, ddistr.my, thetahat, psi, nsim, gridStat = gridStat, method.args = method.args, derCdfWrtPar = derCdfWrtPar)
   }
@@ -412,7 +409,7 @@ mult.sim <- function(xg, x, pdistr.my, ddistr.my, thetahat, psi, nsim,
                      method.args, derCdfWrtPar) {
   n <- NROW(x)
   d <- NCOL(x)
-  z <- matrix(rnorm(n * nsim), nrow = n)
+  z <- matrix(stats::rnorm(n * nsim), nrow = n)
   z <- t(scale(z, center = TRUE, scale = FALSE))
 
   # Associativity avoids a dense n-by-ng parameter-correction matrix.
