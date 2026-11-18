@@ -1,3 +1,16 @@
+# fgof 0.3-0
+
+## Performance
+
+- Speed up the multiplier bootstrap by reusing the multiplier projection for
+  parameter corrections, using sorted cumulative sums for univariate weighted
+  empirical CDFs, and processing multivariate evaluation points in bounded
+  blocks. The statistical procedure and public `gof.test()` interface are
+  unchanged. Different floating-point summation order may produce small
+  numerical differences; bitwise equality is not expected.
+- Qualify dependency calls at their use sites and keep the generated namespace
+  limited to the package's public export.
+
 # fgof 0.2-2
 
 ## Performance

@@ -1,8 +1,8 @@
 Package: fgof
 Type: Package
 Title: Fast Goodness-of-Fit Test
-Version: 0.2-2
-Date: 2026-11-17
+Version: 0.3-0
+Date: 2026-11-18
 Authors@R: c(
     person(given = "Ivan", family = "Kojadinovic", role = "aut"),
     person(given = "Jun", family = "Yan", role = c("aut", "cre"),
