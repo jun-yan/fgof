@@ -5,11 +5,19 @@
 - Speed up the multiplier bootstrap by reusing the multiplier projection for
   parameter corrections, using sorted cumulative sums for univariate weighted
   empirical CDFs, and processing multivariate evaluation points in bounded
-  blocks. The statistical procedure and public `gof.test()` interface are
-  unchanged. Different floating-point summation order may produce small
-  numerical differences; bitwise equality is not expected.
+  blocks. The statistical procedure is unchanged. Different floating-point
+  summation order may produce small numerical differences; bitwise equality is
+  not expected.
 - Qualify dependency calls at their use sites and keep the generated namespace
   limited to the package's public export.
+
+## Interface changes
+
+- Replace overloaded `...` in `gof.test()` with `distr.args` and `optim.args`,
+  named lists for fixed distribution arguments and `stats::optim()` settings.
+  Existing calls that supplied these values directly must move them into the
+  corresponding list. Rename `method.args` to `numDeriv.args` to identify its
+  role as the separate control for numerical differentiation.
 
 # fgof 0.2-2
 

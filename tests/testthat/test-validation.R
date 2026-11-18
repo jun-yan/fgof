@@ -22,9 +22,14 @@ test_that("invalid inputs, callback shapes, and optimization failures are clear"
         "log-density derivative")
   fails(list(derCdfWrtPar = function(theta, x) matrix(0, 1, 1)), "CDF derivative")
   fails(list(x = rep(1, 30), distr = "exp", start = list(rate = 1),
-             method.args = list(), method = "Brent", lower = 0.01, upper = 10),
+             numDeriv.args = list(),
+             optim.args = list(method = "Brent", lower = 0.01, upper = 10)),
         "score covariance")
-  fails(list(control = list(maxit = 1)), "optimization failed")
+  fails(list(optim.args = list(control = list(maxit = 1))), "optimization failed")
+  fails(list(distr.args = c(sd = 1, sd = 2)), "unique, nonempty names")
+  fails(list(optim.args = list(unknown = 1)), "unsupported 'optim.args'")
+  fails(list(optim.args = list(fn = identity)), "cannot set 'par' or 'fn'")
+  fails(list(distr.args = list(meanlog = 0)), "cannot repeat parameters")
 })
 
 test_that("one replicate preserves output names and dimensions for both grids", {

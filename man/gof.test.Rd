@@ -13,10 +13,11 @@ gof.test(
   ng = 1000,
   qgrid = c("empirical", "fitted"),
   gridStat = NULL,
-  method.args = gradControl(),
+  numDeriv.args = gradControl(),
   derCdfWrtPar = NULL,
   derLogPdfWrtPar = NULL,
-  ...
+  distr.args = list(),
+  optim.args = list()
 )
 }
 \arguments{
@@ -36,18 +37,26 @@ gof.test(
 
 \item{gridStat}{Whether to compute grid-based statistics in addition to observation-based statistics.}
 
-\item{method.args}{Numerical Jacobian controls. Omission selects automatic step checks; explicit values are forwarded to numDeriv.}
+\item{numDeriv.args}{Numerical Jacobian controls passed to \code{numDeriv}. Omission selects automatic step checks; explicit values are forwarded unchanged.}
 
 \item{derCdfWrtPar}{Optional CDF derivative callback.}
 
 \item{derLogPdfWrtPar}{Optional log-density derivative callback.}
 
-\item{...}{Fixed distribution arguments and optimizer arguments.}
+\item{distr.args}{Named list of fixed arguments passed to the distribution functions.}
+
+\item{optim.args}{Named list of arguments passed to \code{stats::optim}, such as \code{method}, \code{lower}, \code{upper}, and \code{control}.}
 }
 \description{
 Goodness-of-fit testing with multiplier or parametric bootstrap.
 }
 \details{
+  Fixed distribution parameters belong in \code{distr.args}; optimizer
+  settings belong in \code{optim.args}. Both are named lists. For example,
+  use \code{distr.args = list(sd = 2)} to fix a normal standard deviation
+  and \code{optim.args = list(method = "BFGS")} to choose an optimizer
+  method. Parameters listed in \code{start} are estimated and must not
+  also appear in \code{distr.args}.
   Observations are assumed independent and identically distributed from a
   continuous distribution. Parameters in \code{start} are fitted by maximum
   likelihood. The optimizer defaults to Nelder-Mead, or L-BFGS-B when bounds
@@ -58,7 +67,8 @@ Goodness-of-fit testing with multiplier or parametric bootstrap.
   Automatic numerical differentiation applies to standard and user-defined
   distributions alike. Parameter scales are inferred from two-sided changes
   in the fitted log density, or taken from the absolute optimizer
-  \code{control$parscale} values when supplied. These are numerical scales,
+  \code{control$parscale} values supplied in \code{optim.args}. These are
+  numerical scales,
   not parameter standard errors. A separate feasible radius records finite
   log-density probes; optimizer bounds do not by themselves define this radius.
   Candidate steps cannot exceed either that radius or 10 percent of the scale.
