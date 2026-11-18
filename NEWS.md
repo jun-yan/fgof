@@ -1,5 +1,17 @@
 # fgof 0.2-2
 
+## Performance
+
+- Factor the multiplier parameter correction and reuse its projection across
+  observation and grid statistics. Use sorted cumulative sums for univariate
+  weighted empirical CDFs and bounded point blocks for multivariate calculations.
+  Preserve fitting, derivatives, influence values, multiplier draws, centering,
+  normalization, output layout, and the p-value convention. Floating-point
+  summation order changes, so bitwise equality is not guaranteed.
+- Add direct comparisons with the dense influence calculation, including ties,
+  boundaries, singleton simulations, and supported dimensions. Extend CI push
+  checks to performance branches.
+
 ## Compatibility
 
 - Declare author roles through `Authors@R` and correct DESCRIPTION title case,

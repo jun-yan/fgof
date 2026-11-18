@@ -39,10 +39,10 @@ changes are pushed.
 
 ## Repository scope
 
-This repository contains the R package, documentation, routine tests, and CI.
-Supporting investigations, benchmarks, recovery archives, and manuscript assets
-are maintained separately under the untracked local `investigation/` directory.
-See [NEWS.md](NEWS.md) for package changes.
+This repository contains the R package, its documentation, routine regression
+checks, and CI configuration. Investigations, simulation studies, benchmark
+results, recovery archives, and manuscript files are maintained separately in
+the separate research repository, stored locally under `investigation/`. See [NEWS.md](NEWS.md) for package changes.
 
 The original statistical procedures are described by
 [Kojadinovic and Yan (2012)](https://doi.org/10.1002/cjs.11135).

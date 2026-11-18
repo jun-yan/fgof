@@ -20,7 +20,7 @@ ties, to avoid exact zero and one. The maintainer and contact are unchanged.
 
 - R 4.6.1, x86_64 macOS Sonoma 14.8.7, current indexed mvtnorm 1.4-2,
   numDeriv 2016.8-1.1, and testthat 3.3.2.
-- Build succeeded. All 17 testthat cases and 174 expectations passed without
+- Build succeeded. All 19 testthat cases and 193 expectations passed without
   warnings or skips. Namespace isolation and examples passed.
 - Supplementary R CMD check --as-cran completed with Status: OK, including
   PDF/HTML manuals, with incoming feasibility and remote clock checks disabled.
@@ -40,8 +40,10 @@ ties, to avoid exact zero and one. The maintainer and contact are unchanged.
   multiplier draws. These are numerical validation pilots, not claims of exact
   finite-sample calibration.
 
-Supporting investigation reports and full check evidence are stored separately
-under the untracked local `investigation/` directory.
+Investigation scripts, methodological reports, and complete check evidence
+are maintained separately under the untracked local `investigation/` directory. The performance changes
+have passed a supplementary local check; an online CI run for the final
+performance branch remains pending.
 
 ## Before submission
 

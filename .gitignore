@@ -14,9 +14,11 @@
 .RData
 .Rproj.user/
 .DS_Store
-/investigation/
+
+# Keep investigations and manuscript assets in the companion repository.
 /analysis/
 /misc/
 /REVIVAL_AUDIT.md
 /REVIVAL_REPORT.md
+/investigation/
 /NUMERICAL_DERIVATIVES_AUDIT.md
