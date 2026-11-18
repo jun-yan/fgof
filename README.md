@@ -13,6 +13,18 @@ fit <- gof.test(x, "lnorm", nsim = 199,
 fit$p.value
 ```
 
+## Installation
+
+The development version is available from GitHub. Install `remotes` if needed,
+then install `fgof` with:
+
+```r
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
+remotes::install_github("jun-yan/fgof", upgrade = "never")
+```
+
 The default uses centered normal multipliers. Set `simulation = "pb"` for
 parametric bootstrap with refitting. See `help("gof.test")` for statistics,
 parameter constraints, derivative callbacks, and optimizer controls. The
