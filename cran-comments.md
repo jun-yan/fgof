@@ -40,10 +40,8 @@ ties, to avoid exact zero and one. The maintainer and contact are unchanged.
   multiplier draws. These are numerical validation pilots, not claims of exact
   finite-sample calibration.
 
-Evidence and complete selected check logs are under
-misc/audit/derivative-integration/. Methodology and limits are described in
-analysis/derivative-scale/INTEGRATION.md; development files are excluded from
-source package builds.
+Supporting investigation reports and full check evidence are stored separately
+under the untracked local `investigation/` directory.
 
 ## Before submission
 
