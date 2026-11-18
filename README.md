@@ -47,3 +47,21 @@ See [NEWS.md](NEWS.md) for package changes.
 The original statistical procedures are described by
 [Kojadinovic and Yan (2012)](https://doi.org/10.1002/cjs.11135).
 The package is licensed under GPL (>= 3).
+
+## Numerical differentiation
+
+With `method.args` omitted, the multiplier bootstrap checks derivatives for
+standard and user-defined models using the same generic procedure. It infers
+local parameter scales from log-density changes or uses an existing optimizer
+`control$parscale`. Steps are limited by a relative cap and tested feasible
+radii, then checked for stability separately for the score and CDF. Functions
+must give deterministic values. Unreliable derivatives produce an error with
+suggested alternatives.
+
+Explicit `method.args` retains the previous numDeriv behavior and bypasses the
+automatic checks. For example, `list(d = 0, eps = unname(h), zero.tol = Inf,
+r = 6)` supplies absolute initial steps. Give exactly one positive entry in `h`
+per estimated parameter in density argument order; names do not align entries.
+Check sensitivity to plausible steps, since smaller steps can lose precision.
+Analytical callbacks remain available and must incorporate fixed parameters.
+These changes leave the score-covariance and influence-matrix formulas intact.

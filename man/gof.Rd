@@ -6,7 +6,8 @@ One Sample Goodness-of-fit Test
 \description{
   Goodness-of-fit test for one sample data with two bootstrap methods:
   multiplier bootstrap and parametric bootstrap. The multiplier bootstrap
-  method is faster, using generic numeric derivatives.
+  method avoids refitting each replicate and uses numerical or supplied
+  analytical derivatives.
 }
 \usage{
 gof.test(x, distr, nsim, start, 
@@ -54,10 +55,20 @@ gof.test(x, distr, nsim, start,
     and \code{FALSE} in higher dimensions.
   }
   \item{method.args}{
-    a list of arguments to control \code{jacobian}
-    from package numDeriv. The default is:
+    a list of Richardson controls for \code{jacobian} from package numDeriv.
+    If omitted, multiplier-bootstrap derivatives use automatic scale and
+    stability checks described below. Supplying this list explicitly bypasses
+    automatic selection and forwards the controls unchanged to numDeriv.
+    The default Richardson controls are:
     eps=1e-4, d=0.0001, zero.tol=sqrt(.Machine$double.eps/7e-7),
-    r=6, v=2, show.details=FALSE
+    r=6, v=2, show.details=FALSE.
+    An explicit \code{list()} instead uses numDeriv's own defaults, including
+    \code{r = 4}. Parameter-specific absolute initial steps \code{h} can be
+    requested with \code{list(d = 0, eps = unname(h), zero.tol = Inf, r = 6)}.
+    Supply one positive step per estimated parameter in density argument order,
+    which is the returned estimate order. Step-vector names do not match or
+    reorder parameters. This vector behavior is verified with numDeriv
+    2016.8-1.1; choose steps appropriate to the model domain and precision.
   }
   \item{derCdfWrtPar}{
     derivative function of the CDF with respect to parameters. It is called as
@@ -90,6 +101,30 @@ gof.test(x, distr, nsim, start,
   are supplied. Choose appropriate starting values and bounds for the model;
   numerical derivatives may fail near parameter boundaries, and the multiplier
   procedure requires an invertible score covariance matrix.
+
+  Automatic numerical differentiation applies to standard and user-defined
+  distributions alike. Parameter scales are inferred from two-sided changes
+  in the fitted log density, or taken from the absolute optimizer
+  \code{control$parscale} values when supplied. These are numerical scales,
+  not parameter standard errors. A separate feasible radius records finite
+  log-density probes; optimizer bounds do not by themselves define this radius.
+  Candidate steps cannot exceed either that radius or 10 percent of the scale.
+  Representable power-of-two steps are compared independently for log-density
+  and CDF Jacobians. Three successive estimates must agree componentwise in
+  scaled units, with absolute tolerance \code{1e-7} and relative tolerance
+  \code{1e-5}. Richardson extrapolation retains six levels. A previous default
+  derivative is kept when it meets these checks.
+
+  Selection stops with an actionable error if no reliable two-sided stencil
+  is found or repeated function values reveal numerical randomness. It does
+  not silently fall back to unchecked derivatives. Functions used for automatic
+  selection must be deterministic and free of side effects. Approximate CDF
+  integration, weak parameter sensitivity, constraints, and nonsmooth models
+  can require analytical callbacks or explicitly selected numerical controls.
+  Agreement between finite differences does not establish model regularity.
+  No automatic selection is performed for parametric bootstrap. Analytical
+  callbacks replace their corresponding derivatives; automatic checks continue
+  for any remaining numerical Jacobian.
 
   The parametric bootstrap simulates from the fitted model and refits every
   replicate. The multiplier bootstrap uses centered standard normal multipliers
