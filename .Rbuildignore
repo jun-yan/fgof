@@ -9,4 +9,5 @@
 ^\.github$
 ^.*\.Rcheck$
 ^.*\.tar\.gz$
+^analysis$
 ^investigation$
