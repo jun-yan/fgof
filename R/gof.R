@@ -282,22 +282,21 @@ mult.sim <- function(xg, x, pdistr.my, ddistr.my, thetahat, psi, nsim,
                      ## zcenter = TRUE, ## should always be TRUE
                      gridStat = TRUE,
                      method.args, derCdfWrtPar) {
-  p <- length(thetahat)
   n <- NROW(x)
   d <- NCOL(x)
-  ## xg is null unless gridStat == TRUE
-  
   z <- matrix(rnorm(n * nsim), nrow = n)
-  ## if (zcenter) z <- t(scale(z, center = TRUE, scale = FALSE)) ## nsim by n
-  ## else z <- t(z)  ## nsim by n
-  z <- t(scale(z, center = TRUE, scale = FALSE)) ## nsim by n
+  z <- t(scale(z, center = TRUE, scale = FALSE))
 
-  infla <- influFun(x, x, psi, pdistr.my, thetahat, method.args, derCdfWrtPar)
-  stat.sim <- influStat(infla, z)
+  # Associativity avoids a dense n-by-ng parameter-correction matrix.
+  projection <- z %*% t(psi)
+  empirical <- if (d == 1L) multiplierEcdf(x[, 1], z) else NULL
+  if (d == 1L) z <- NULL
+  stat.sim <- multiplierStat(x, x, z, empirical, projection, pdistr.my,
+    thetahat, method.args, derCdfWrtPar)
   rownames(stat.sim) <- c("ksa", "cvma")
   if (gridStat) {
-    infl <- influFun(xg, x, psi, pdistr.my, thetahat, method.args, derCdfWrtPar)
-    stat.sim <- rbind(influStat(infl, z), stat.sim)
+    stat.sim <- rbind(multiplierStat(xg, x, z, empirical, projection, pdistr.my,
+      thetahat, method.args, derCdfWrtPar), stat.sim)
     rownames(stat.sim) <- c("ks", "cvm", "ksa", "cvma")
   }
   stat.sim
