@@ -67,6 +67,134 @@ gradControl <- function(eps=1e-4, d=0.0001,
   list(eps=eps, d = d, zero.tol = zero.tol, r = r, v = v, show.details = show.details)
 }
 
+##' One Sample Goodness-of-fit Test
+##'
+##' Goodness-of-fit testing with multiplier or parametric bootstrap.
+##' @param x A nonempty numeric vector or matrix of finite observations.
+##' @param distr Name of the hypothesized distribution.
+##' @param nsim Positive integer giving the number of bootstrap replicates.
+##' @param start Nonempty named list of starting values for parameters to estimate.
+##' @param simulation Bootstrap method: multiplier (`mult`) or parametric (`pb`).
+##' @param ng Target number of grid points.
+##' @param qgrid Grid construction method: empirical or fitted quantiles.
+##' @param gridStat Whether to compute grid-based statistics in addition to observation-based statistics.
+##' @param method.args Numerical Jacobian controls. Omission selects automatic step checks; explicit values are forwarded to numDeriv.
+##' @param derCdfWrtPar Optional CDF derivative callback.
+##' @param derLogPdfWrtPar Optional log-density derivative callback.
+##' @param ... Fixed distribution arguments and optimizer arguments.
+##' @rawRd
+##' \details{
+##'   Observations are assumed independent and identically distributed from a
+##'   continuous distribution. Parameters in \code{start} are fitted by maximum
+##'   likelihood. The optimizer defaults to Nelder-Mead, or L-BFGS-B when bounds
+##'   are supplied. Choose appropriate starting values and bounds for the model;
+##'   numerical derivatives may fail near parameter boundaries, and the multiplier
+##'   procedure requires an invertible score covariance matrix.
+##'
+##'   Automatic numerical differentiation applies to standard and user-defined
+##'   distributions alike. Parameter scales are inferred from two-sided changes
+##'   in the fitted log density, or taken from the absolute optimizer
+##'   \code{control$parscale} values when supplied. These are numerical scales,
+##'   not parameter standard errors. A separate feasible radius records finite
+##'   log-density probes; optimizer bounds do not by themselves define this radius.
+##'   Candidate steps cannot exceed either that radius or 10 percent of the scale.
+##'   Representable power-of-two steps are compared independently for log-density
+##'   and CDF Jacobians. Three successive estimates must agree componentwise in
+##'   scaled units, with absolute tolerance \code{1e-7} and relative tolerance
+##'   \code{1e-5}. Richardson extrapolation retains six levels. A previous default
+##'   derivative is kept when it meets these checks.
+##'
+##'   Selection stops with an actionable error if no reliable two-sided stencil
+##'   is found or repeated function values reveal numerical randomness. It does
+##'   not silently fall back to unchecked derivatives. Functions used for automatic
+##'   selection must be deterministic and free of side effects. Approximate CDF
+##'   integration, weak parameter sensitivity, constraints, and nonsmooth models
+##'   can require analytical callbacks or explicitly selected numerical controls.
+##'   Agreement between finite differences does not establish model regularity.
+##'   No automatic selection is performed for parametric bootstrap. Analytical
+##'   callbacks replace their corresponding derivatives; automatic checks continue
+##'   for any remaining numerical Jacobian.
+##'
+##'   The parametric bootstrap simulates from the fitted model and refits every
+##'   replicate. The multiplier bootstrap uses centered standard normal multipliers
+##'   and an estimated parameter influence function. Grid-based statistics reuse
+##'   the grid constructed from the original observations in both procedures.
+##'
+##'   The observation-based statistics \code{ksa} and \code{cvma} are respectively
+##'   the maximum absolute empirical-minus-fitted CDF difference at observations
+##'   and \eqn{n} times its mean square. The grid-based counterparts \code{ks} and
+##'   \code{cvm} evaluate these expressions at empirical or fitted quantile points.
+##'   The KS quantities use the unscaled differences, consistently in observed and
+##'   simulated statistics. The empirical CDF in multiple dimensions counts
+##'   componentwise inequalities.
+##'
+##'   Univariate models are the primary supported interface. Multivariate models
+##'   require compatible distribution wrappers with a single vector parameter.
+##'   The internal normal and t wrappers use integration algorithms for dimensions
+##'   two and three; they do not provide general higher-dimensional support.
+##'   Analytical t derivatives assume unrestricted correlations and fixed degrees
+##'   of freedom. There is no interface for a test with all parameters known.
+##'
+##'   Set a random seed before calling the function for reproducible simulations
+##'   within a fixed R and dependency environment. No seed is set internally.
+##' }
+##' @rawRd
+##' \value{
+##'   a list with the following components:
+##'   \item{statistic}{Named vector of test statistics: \code{ks}, \code{cvm},
+##'     \code{ksa}, \code{cvma} when \code{gridStat = TRUE}; otherwise \code{ksa},
+##'     \code{cvma}.}
+##'   \item{p.value}{Named vector of p-values in the same order as \code{statistic}.
+##'     Computed as \code{(count + 0.5) / (nsim + 1)}, where \code{count} is the
+##'     number of bootstrap statistics at least as large as the observed statistic.
+##'     Values lie strictly between zero and one, including when no or all
+##'     bootstrap statistics exceed the observed statistic.}
+##'   \item{estimate}{vector of estimated parameter values}
+##'   \item{stat.sim}{Matrix of bootstrap draws with one named row per statistic
+##'     and \code{nsim} columns.}
+##' }
+##' @rawRd
+##' \references{
+##'   Kojadinovic I. and Yan J. (2012): Goodness-of-fit testing based on a weighted
+##'   bootstrap: A fast large-sample alternative to the parametric
+##'   bootstrap. Canadian Journal of Statistics, 40(3), 480--500.
+##'   \doi{10.1002/cjs.11135}.
+##' }
+##' @rawRd
+##' \author{
+##'   Ivan Kojadinovic and Jun Yan.
+##' }
+##' @rawRd
+##' \examples{
+##' set.seed(123)
+##' # Small simulation counts illustrate usage; use more for final inference.
+##'
+##' n <- 200
+##' x <- rlnorm(200, 1, 1)
+##'
+##' system.time(m1 <- gof.test(x, "lnorm", 99, list(meanlog=1, sdlog=1), simulation="pb"))
+##' system.time(m2 <- gof.test(x, "lnorm", 99, list(meanlog=1, sdlog=1), simulation="mult"))
+##' apply(m1$stat.sim, 1, summary)
+##' apply(m2$stat.sim, 1, summary)
+##'
+##' system.time(m1 <- gof.test(x, "gamma", 99, list(shape=1, rate=1), simulation="pb"))
+##' system.time(m2 <- gof.test(x, "gamma", 99, list(shape=1, rate=1), simulation="mult"))
+##' apply(m1$stat.sim, 1, summary)
+##' apply(m2$stat.sim, 1, summary)
+##'
+##'
+##' system.time(m1 <- gof.test(x, "exp", 99, list(rate=1), simulation="pb"))
+##' system.time(m2 <- gof.test(x, "exp", 99, list(rate=1), simulation="mult"))
+##' apply(m1$stat.sim, 1, summary)
+##' apply(m2$stat.sim, 1, summary)
+##'
+##' }
+##' @rawRd
+##' \keyword{ htest }
+##' @importFrom stats dt ecdf optim pt quantile rnorm setNames var
+##' @importFrom mvtnorm dmvnorm dmvt GenzBretz pmvnorm pmvt rmvnorm rmvt TVPACK
+##' @importFrom numDeriv jacobian
+##' @export
 gof.test <- function(x, distr, nsim, start,
                      simulation = c("mult", "pb"),
                      ng = 1000,
