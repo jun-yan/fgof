@@ -1,0 +1,15 @@
+bibentry(
+  bibtype = "Article",
+  key = "kojadinovic2012goodness",
+  title = paste(
+    "Goodness-of-fit testing based on a weighted bootstrap:",
+    "A fast large-sample alternative to the parametric bootstrap"
+  ),
+  author = c(person("Ivan", "Kojadinovic"), person("Jun", "Yan")),
+  journal = "The Canadian Journal of Statistics",
+  year = "2012",
+  volume = "40",
+  number = "3",
+  pages = "480--500",
+  doi = "10.1002/cjs.11135"
+)
