@@ -1,0 +1,133 @@
+---
+title: "Bivariate Student t goodness-of-fit tests with the multiplier bootstrap"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Bivariate Student t goodness-of-fit tests with the multiplier bootstrap}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This example tests whether independent pairs follow a bivariate Student
+$t$ distribution. We fix the degrees of freedom at five and estimate two
+location parameters, two diagonal dispersion entries, and one correlation.
+We use the multiplier bootstrap, the default in `gof.test()`
+(`simulation = "mult"`).
+See the [univariate vignette](univariate.html) for an introduction to the
+bootstrap procedures and p-values.
+
+## Simulate paired observations
+
+Let $v_1$ and $v_2$ denote the diagonal entries of the dispersion matrix.
+The off-diagonal entry is $\rho\sqrt{v_1v_2}$, where $\rho$ is the
+correlation. With $\nu = 5$ degrees of freedom, the covariance matrix
+is $\nu/(\nu - 2)$ times the dispersion matrix.
+
+```{r}
+library(fgof)
+
+set.seed(123)
+df <- 5
+location <- c(0, 1)
+dispersion <- matrix(c(1, 0.6, 0.6, 2), nrow = 2)
+x <- mvtnorm::rmvt(100, sigma = dispersion, df = df,
+                  delta = location, type = "shifted")
+```
+
+## Supply the analytical derivatives
+
+The multiplier bootstrap uses the derivative of the joint cumulative
+distribution function (CDF) and the derivative of the log-density, also
+called the score. Together they account for the effect of estimating
+parameters on the fitted CDF. Each callback takes the parameter vector and
+a matrix of evaluation points. It returns one row per point and one column
+per estimated parameter in the order
+$(\mu_1, \mu_2, v_1, v_2, \rho)$.
+
+The callbacks below use internal `fgof` helpers through `:::`. They
+capture the same fixed degrees of freedom that the test passes to the
+distribution wrappers.
+
+```{r}
+cdf_gradient <- function(theta, points) {
+  fgof:::gradCdfT(theta, points, df = df)
+}
+
+score <- function(theta, points) {
+  fgof:::gradLogPdfT(theta, points, df = df)
+}
+```
+
+## Fit the model with analytical derivatives
+
+Use the internal `"mymvt"` distribution wrappers with `dispstr = "un"`
+for unrestricted correlation. The optimizer bounds keep the diagonal
+dispersion entries positive and the correlation inside $(-1, 1)$. In
+two dimensions, these conditions ensure a positive definite dispersion
+matrix.
+
+```{r}
+start <- list(param = c(mean(x[, 1]), mean(x[, 2]), 1, 1, 0))
+
+set.seed(456)
+fit <- gof.test(
+  x, "mymvt", nsim = 199, start = start, simulation = "mult",
+  derCdfWrtPar = cdf_gradient, derLogPdfWrtPar = score,
+  distr.args = list(df = df, dispstr = "un"),
+  optim.args = list(lower = c(-Inf, -Inf, 1e-4, 1e-4, -0.999),
+                    upper = c(Inf, Inf, Inf, Inf, 0.999))
+)
+
+setNames(fit$estimate, c("mu1", "mu2", "v1", "v2", "rho"))
+rbind(statistic = fit$statistic, p.value = fit$p.value)
+```
+
+## Compare with numerical derivatives
+
+To obtain numerical derivatives for the same model, use
+`numDeriv::jacobian()` on the CDF and log-density. Each Jacobian has
+the same row and column order as its analytical counterpart.
+As in the analytical callbacks, the degrees of freedom stay fixed.
+
+```{r}
+cdf_gradient_num <- function(theta, points) {
+  numDeriv::jacobian(function(par) {
+    fgof:::pmymvt(points, par, dispstr = "un", df = df)
+  }, theta)
+}
+
+score_num <- function(theta, points) {
+  numDeriv::jacobian(function(par) {
+    fgof:::dmymvt(points, par, dispstr = "un", df = df, log = TRUE)
+  }, theta)
+}
+
+theta <- fit$estimate
+c(cdf = max(abs(cdf_gradient_num(theta, x) - cdf_gradient(theta, x))),
+  score = max(abs(score_num(theta, x) - score(theta, x))))
+```
+
+Use the numerical callbacks in a second test and reset the seed to use
+the same multiplier draws as in the analytical run.
+
+```{r}
+set.seed(456)
+fit_num <- gof.test(
+  x, "mymvt", nsim = 199, start = start, simulation = "mult",
+  derCdfWrtPar = cdf_gradient_num, derLogPdfWrtPar = score_num,
+  distr.args = list(df = df, dispstr = "un"),
+  optim.args = list(lower = c(-Inf, -Inf, 1e-4, 1e-4, -0.999),
+                    upper = c(Inf, Inf, Inf, Inf, 0.999))
+)
+
+rbind(analytical = fit$p.value, numerical = fit_num$p.value)
+max(abs(fit$stat.sim - fit_num$stat.sim))
+```
+
+## Interpret the test statistics
+
+For a point $(a, b)$, the joint CDF gives the probability that the first
+coordinate is at most $a$ and the second is at most $b$. The test compares
+this fitted probability with the observed fraction of pairs satisfying
+both inequalities. By default, the multivariate test evaluates the
+discrepancies at the observed pairs. The statistic `ksa` uses the largest
+absolute discrepancy, and `cvma` sums squared discrepancies.

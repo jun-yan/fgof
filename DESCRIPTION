@@ -8,7 +8,8 @@ Authors@R: c(
     person(given = "Jun", family = "Yan", role = c("aut", "cre"),
            email = "jun.yan@uconn.edu"))
 Imports: copula, mvtnorm, numDeriv
-Suggests: testthat (>= 3.0.0), roxygen2
+Suggests: knitr, rmarkdown, roxygen2, RTMB, testthat (>= 3.0.0)
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 Description: Goodness-of-fit test with multiplier or parametric

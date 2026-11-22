@@ -1,0 +1,142 @@
+---
+title: "Univariate goodness-of-fit tests with the multiplier bootstrap"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Univariate goodness-of-fit tests with the multiplier bootstrap}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The function `gof.test()` compares an empirical cumulative distribution
+function (CDF) with a fitted CDF. In this example, we test whether independent,
+positive observations follow a lognormal distribution with unknown log-scale
+mean and standard deviation.
+
+The default is the multiplier bootstrap (`simulation = "mult"`). The main
+example uses this default, followed by a parametric bootstrap comparison.
+
+## Run the multiplier bootstrap with numerical derivatives
+
+```{r}
+library(fgof)
+
+set.seed(123)
+x <- rlnorm(100, meanlog = 1, sdlog = 0.5)
+start <- list(meanlog = mean(log(x)), sdlog = sd(log(x)))
+
+set.seed(456)
+fit_mult <- gof.test(x, "lnorm", nsim = 199, start = start)
+fit_mult$estimate
+rbind(statistic = fit_mult$statistic, p.value = fit_mult$p.value)
+```
+
+The names in `start` match the arguments of `dlnorm()`. The values initialize
+maximum likelihood estimation. For models with a fixed distribution argument,
+supply it in `distr.args`. For example, to test a lognormal model with known
+`sdlog = 0.5`, supply `distr.args = list(sdlog = 0.5)` and include only
+`meanlog` in `start`.
+
+The multiplier bootstrap uses derivatives of the CDF and log-density with
+respect to the fitted parameters to account for parameter estimation.
+When the derivative callbacks are omitted, as above, `gof.test()` estimates
+both derivatives by numerical differentiation. The `ks` and `ksa`
+statistics measure the largest absolute difference, while `cvm` and `cvma`
+use squared differences. The statistics are evaluated on a quantile
+grid (`ks` and `cvm`) or the observations themselves (`ksa` and `cvma`).
+Use `gridStat = FALSE` to compute only the observation-based statistics.
+
+## Supply analytical derivatives with automatic differentiation
+
+For a positive observation $x$, write $z = (\log x - \mu)/\sigma$, where
+$\mu$ and $\sigma$ are `meanlog` and `sdlog`. The CDF is $\Phi(z)$, where
+$\Phi$ is the standard normal CDF. The log-density is
+$-z^2/2 - \log(\sigma) - \log(x) - \log(2\pi)/2$.
+
+R's `stats::deriv()` generates code that evaluates each expression and
+its analytical gradient by applying derivative rules to the expression.
+The callbacks extract the gradient matrix, with one row per evaluation
+point and columns in parameter order.
+[Documentation for `stats::deriv()`](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/deriv.html)
+
+```{r}
+parameters <- c("meanlog", "sdlog")
+cdf_with_gradient <- stats::deriv(
+  ~ pnorm((log(x) - meanlog) / sdlog),
+  parameters, function.arg = c("x", parameters)
+)
+log_density_with_gradient <- stats::deriv(
+  ~ -((log(x) - meanlog) / sdlog)^2 / 2 - log(sdlog) - log(x) -
+    log(2 * pi) / 2,
+  parameters, function.arg = c("x", parameters)
+)
+
+cdf_gradient <- function(theta, x) {
+  attr(cdf_with_gradient(as.numeric(x), theta[1], theta[2]), "gradient")
+}
+
+score <- function(theta, x) {
+  attr(log_density_with_gradient(as.numeric(x), theta[1], theta[2]), "gradient")
+}
+
+set.seed(456)
+fit_analytic <- gof.test(
+  x, "lnorm", nsim = 199, start = start,
+  derCdfWrtPar = cdf_gradient, derLogPdfWrtPar = score
+)
+
+rbind(numerical = fit_mult$p.value, analytical = fit_analytic$p.value)
+max(abs(fit_mult$stat.sim - fit_analytic$stat.sim))
+```
+
+Resetting the seed uses the same multiplier draws in both fits. Comparing
+the simulated statistics directly shows how closely the two derivative
+methods agree, even when the discrete bootstrap p-values coincide.
+
+## Compare with automatic differentiation in RTMB
+
+With RTMB installed, `RTMB::MakeTape()` records the operations that compute
+the CDF or log-density at fixed evaluation points. Its `jacobian()` method
+then differentiates those outputs with respect to the fitted parameters.
+Use `RTMB::pnorm()` inside the tape so that RTMB can differentiate the
+standard normal CDF. [RTMB on CRAN](https://CRAN.R-project.org/package=RTMB)
+
+```{r, eval=requireNamespace("RTMB", quietly = TRUE)}
+theta <- unname(fit_analytic$estimate)
+points <- x[1:5]
+log_points <- log(points)
+
+cdf_tape <- RTMB::MakeTape(function(par) {
+  RTMB::pnorm((log_points - par[1]) / par[2])
+}, theta)
+
+log_density_tape <- RTMB::MakeTape(function(par) {
+  z <- (log_points - par[1]) / par[2]
+  -z^2 / 2 - log(par[2]) - log_points - log(2 * pi) / 2
+}, theta)
+
+c(cdf = max(abs(cdf_tape$jacobian(theta) - cdf_gradient(theta, points))),
+  score = max(abs(log_density_tape$jacobian(theta) - score(theta, points))))
+```
+
+The two numbers are the largest absolute differences from the corresponding
+`stats::deriv()` gradients. Each tape holds the evaluation points fixed, so
+build a new tape if those points change.
+
+## Run the parametric bootstrap
+
+```{r}
+set.seed(789)
+fit_pb <- gof.test(x, "lnorm", nsim = 199, start = start,
+                   simulation = "pb")
+fit_pb$p.value
+```
+
+The parametric bootstrap simulates samples from the fitted lognormal model and
+refits the model to each sample. For either bootstrap method, a small p-value
+indicates that the observed discrepancy is large relative to those simulated
+under the fitted model. A large p-value indicates insufficient evidence against
+the model. Choose the test statistic before inspecting the p-values. Increase
+`nsim` when the Monte Carlo variability matters for the decision.
+
+See `help("gof.test", package = "fgof")` for the available statistics,
+quantile grids, and optimizer controls.

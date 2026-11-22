@@ -40,7 +40,6 @@ jobs:
             ${{ matrix.config.incoming && 'any::V8' || '' }}
           needs: check
       - uses: r-lib/actions/setup-pandoc@v2
-        if: ${{ matrix.config.incoming }}
       - name: Install HTML validation tools
         if: ${{ matrix.config.incoming }}
         run: |
