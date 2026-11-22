@@ -1,5 +1,9 @@
 ---
 title: "Bivariate Student t goodness-of-fit tests with the multiplier bootstrap"
+author:
+  - Ivan Kojadinovic
+  - Jun Yan
+bibliography: references.bib
 engine: knitr
 format:
   html:
@@ -10,15 +14,25 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-This example tests whether independent pairs follow a bivariate Student
-$t$ distribution. We fix the degrees of freedom at five and estimate two
-location parameters, two diagonal dispersion entries, and one correlation.
-We use the multiplier bootstrap, the default in `gof.test()`
-(`simulation = "mult"`).
+The `fgof` package provides goodness-of-fit tests for continuous distributions
+with parameters estimated from the data. Its `gof.test()` function compares
+the empirical cumulative distribution function (CDF) with the fitted CDF.
+It uses the multiplier bootstrap by default (`simulation = "mult"`) and also
+supports the parametric bootstrap (`simulation = "pb"`)
+[@kojadinovic2012goodness].
+
+In this vignette, we use the multiplier bootstrap to test whether independent
+pairs follow a bivariate Student $t$ distribution. We fix the degrees of
+freedom at five and estimate two location parameters, two diagonal dispersion
+entries, and one correlation.
 See the [univariate vignette](univariate.html) for an introduction to the
 bootstrap procedures and p-values.
 
 ## Simulate paired observations
+
+We generate 100 independent pairs from the model under test. The two
+coordinates within each pair can be dependent. Each row of `x` holds one
+pair, and each column corresponds to one coordinate.
 
 Let $v_1$ and $v_2$ denote the diagonal entries of the dispersion matrix.
 The off-diagonal entry is $\rho\sqrt{v_1v_2}$, where $\rho$ is the
@@ -38,17 +52,17 @@ x <- mvtnorm::rmvt(100, sigma = dispersion, df = df,
 
 ## Supply the analytical derivatives
 
-The multiplier bootstrap uses the derivative of the joint cumulative
-distribution function (CDF) and the derivative of the log-density, also
-called the score. Together they account for the effect of estimating
-parameters on the fitted CDF. Each callback takes the parameter vector and
-a matrix of evaluation points. It returns one row per point and one column
-per estimated parameter in the order
+The multiplier bootstrap uses the derivative of the joint CDF and the
+derivative of the log-density, also called the score. Together they account
+for the effect of estimating parameters on the fitted CDF. Each callback
+takes the parameter vector and a matrix of evaluation points. It returns
+one row per point and one column per estimated parameter in the order
 $(\mu_1, \mu_2, v_1, v_2, \rho)$.
 
-The callbacks below use internal `fgof` helpers through `:::`. They
-capture the same fixed degrees of freedom that the test passes to the
-distribution wrappers.
+The callbacks below use the analytical derivatives for the Student $t$
+model with fixed degrees of freedom described by @kojadinovic2012goodness.
+They call internal `fgof` helpers through `:::` and use the same fixed
+degrees of freedom as the distribution wrappers.
 
 ```{r}
 cdf_gradient <- function(theta, points) {
@@ -63,8 +77,10 @@ score <- function(theta, points) {
 ## Fit the model with analytical derivatives
 
 Use the internal `"mymvt"` distribution wrappers with `dispstr = "un"`
-for unrestricted correlation. The optimizer bounds keep the diagonal
-dispersion entries positive and the correlation inside $(-1, 1)$. In
+for unrestricted correlation. Pass the fixed `df` in `distr.args` and the
+starting values for the five estimated parameters in `start`. The optimizer
+bounds keep the diagonal dispersion entries positive and the correlation
+inside $(-1, 1)$. In
 two dimensions, these conditions ensure a positive definite dispersion
 matrix.
 
@@ -83,6 +99,20 @@ fit <- gof.test(
 setNames(fit$estimate, c("mu1", "mu2", "v1", "v2", "rho"))
 rbind(statistic = fit$statistic, p.value = fit$p.value)
 ```
+
+## Interpret the test statistics
+
+For a point $(a, b)$, the joint CDF gives the probability that the first
+coordinate is at most $a$ and the second is at most $b$. The test compares
+this fitted probability with the observed fraction of pairs satisfying
+both inequalities. By default, the multivariate test evaluates the
+discrepancies at the observed pairs. The observation-based Kolmogorov–Smirnov
+statistic `ksa` uses the largest absolute discrepancy. The observation-based
+Cramér–von Mises statistic `cvma` sums the squared discrepancies.
+
+The `ksa` p-value is about `r round(fit$p.value[["ksa"]], 2)`. At the 5%
+level, this test gives insufficient evidence against the bivariate Student
+$t$ model with five degrees of freedom.
 
 ## Compare with numerical derivatives
 
@@ -126,11 +156,11 @@ rbind(analytical = fit$p.value, numerical = fit_num$p.value)
 max(abs(fit$stat.sim - fit_num$stat.sim))
 ```
 
-## Interpret the test statistics
+The p-value table compares the two runs. The maximum absolute difference
+between the simulated statistics gives a finer comparison when the p-values
+coincide.
 
-For a point $(a, b)$, the joint CDF gives the probability that the first
-coordinate is at most $a$ and the second is at most $b$. The test compares
-this fitted probability with the observed fraction of pairs satisfying
-both inequalities. By default, the multivariate test evaluates the
-discrepancies at the observed pairs. The statistic `ksa` uses the largest
-absolute discrepancy, and `cvma` sums squared discrepancies.
+## References
+
+::: {#refs}
+:::

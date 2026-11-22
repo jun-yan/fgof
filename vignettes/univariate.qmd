@@ -1,5 +1,9 @@
 ---
 title: "Univariate goodness-of-fit tests with the multiplier bootstrap"
+author:
+  - Ivan Kojadinovic
+  - Jun Yan
+bibliography: references.bib
 engine: knitr
 format:
   html:
@@ -10,15 +14,24 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-The function `gof.test()` compares an empirical cumulative distribution
-function (CDF) with a fitted CDF. In this example, we test whether independent,
-positive observations follow a lognormal distribution with unknown log-scale
-mean and standard deviation.
+The `fgof` package provides goodness-of-fit tests for continuous distributions
+with parameters estimated from the data. Its `gof.test()` function compares
+the empirical cumulative distribution function (CDF) with the fitted CDF.
+It uses the multiplier bootstrap by default (`simulation = "mult"`) and also
+supports the parametric bootstrap (`simulation = "pb"`)
+[@kojadinovic2012goodness].
 
-The default is the multiplier bootstrap (`simulation = "mult"`). The main
-example uses this default, followed by a parametric bootstrap comparison.
+In this vignette, we test whether independent, positive observations follow a
+lognormal distribution with unknown log-scale mean and standard deviation.
+We use the multiplier bootstrap first, then compare it with the parametric
+bootstrap.
 
-## Run the multiplier bootstrap with numerical derivatives
+## Simulate a lognormal sample
+
+We generate 100 independent observations with `meanlog = 1` and
+`sdlog = 0.5`. These values determine the simulation. For the test, we
+estimate both parameters from the sample. The sample mean and standard
+deviation of `log(x)` provide starting values for maximum likelihood.
 
 ```{r}
 library(fgof)
@@ -26,29 +39,39 @@ library(fgof)
 set.seed(123)
 x <- rlnorm(100, meanlog = 1, sdlog = 0.5)
 start <- list(meanlog = mean(log(x)), sdlog = sd(log(x)))
+```
 
+## Run the default multiplier test
+
+Use `distr = "lnorm"` to select the lognormal model. The names in `start`
+match the parameters of `dlnorm()`. Set `nsim = 199` to generate 199
+bootstrap replicates for this example. The multiplier bootstrap uses
+derivatives of the fitted CDF and log-density to account for parameter
+estimation. This call uses numerical differentiation because we omit
+the derivative callbacks.
+
+```{r}
 set.seed(456)
 fit_mult <- gof.test(x, "lnorm", nsim = 199, start = start)
 fit_mult$estimate
 rbind(statistic = fit_mult$statistic, p.value = fit_mult$p.value)
 ```
 
-The names in `start` match the arguments of `dlnorm()`. The values initialize
-maximum likelihood estimation. For models with a fixed distribution argument,
-supply it in `distr.args`. For example, to test a lognormal model with known
-`sdlog = 0.5`, supply `distr.args = list(sdlog = 0.5)` and include only
-`meanlog` in `start`.
+`estimate` contains the fitted log-scale mean and standard deviation.
+The table shows the observed statistics and their bootstrap p-values.
+Each statistic compares the empirical and fitted CDFs at a set of points.
 
-The multiplier bootstrap uses derivatives of the CDF and log-density with
-respect to the fitted parameters to account for parameter estimation.
-When the derivative callbacks are omitted, as above, `gof.test()` estimates
-both derivatives by numerical differentiation. The `ks` and `ksa`
-statistics measure the largest absolute difference, while `cvm` and `cvma`
-use squared differences. The statistics are evaluated on a quantile
-grid (`ks` and `cvm`) or the observations themselves (`ksa` and `cvma`).
+| Discrepancy | Quantile grid | Observed values |
+|:--|:--:|:--:|
+| Largest absolute difference (Kolmogorov–Smirnov) | `ks` | `ksa` |
+| Squared differences (Cramér–von Mises) | `cvm` | `cvma` |
+
+For example, the observation-based Kolmogorov–Smirnov p-value is about
+`r round(fit_mult$p.value[["ksa"]], 2)`. At the 5% level, this test gives
+insufficient evidence against the lognormal model.
 Use `gridStat = FALSE` to compute only the observation-based statistics.
 
-## Supply analytical derivatives with automatic differentiation
+## Generate analytical derivatives with `stats::deriv()`
 
 For a positive observation $x$, write $z = (\log x - \mu)/\sigma$, where
 $\mu$ and $\sigma$ are `meanlog` and `sdlog`. The CDF is $\Phi(z)$, where
@@ -138,6 +161,10 @@ and `stats::deriv()` runs using the same multiplier draws.
 
 ## Run the parametric bootstrap
 
+To compare the two resampling methods, set `simulation = "pb"`. The
+parametric bootstrap simulates samples from the fitted lognormal model and
+refits the model to each sample.
+
 ```{r}
 set.seed(789)
 fit_pb <- gof.test(x, "lnorm", nsim = 199, start = start,
@@ -145,12 +172,22 @@ fit_pb <- gof.test(x, "lnorm", nsim = 199, start = start,
 fit_pb$p.value
 ```
 
-The parametric bootstrap simulates samples from the fitted lognormal model and
-refits the model to each sample. For either bootstrap method, a small p-value
-indicates that the observed discrepancy is large relative to those simulated
-under the fitted model. A large p-value indicates insufficient evidence against
-the model. Choose the test statistic before inspecting the p-values. Increase
-`nsim` when the Monte Carlo variability matters for the decision.
+For either bootstrap method, a small p-value indicates that the observed
+discrepancy is large relative to the simulated discrepancies. The two
+methods use different resampling schemes, so their p-values can differ.
+Choose the test statistic before inspecting the p-values. Increase `nsim`
+when Monte Carlo variability matters for the decision.
+
+## Test a model with a fixed parameter
+
+To test a lognormal model with known `sdlog = 0.5`, pass
+`distr.args = list(sdlog = 0.5)` and include only `meanlog` in `start`.
+The fitted model and bootstrap samples then use the same fixed `sdlog`.
 
 See `help("gof.test", package = "fgof")` for the available statistics,
 quantile grids, and optimizer controls.
+
+## References
+
+::: {#refs}
+:::
