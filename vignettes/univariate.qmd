@@ -21,6 +21,11 @@ It uses the multiplier bootstrap by default (`simulation = "mult"`) and also
 supports the parametric bootstrap (`simulation = "pb"`)
 [@kojadinovic2012goodness].
 
+The usual one-sample p-value from `stats::ks.test()` assumes a fully
+specified null distribution. Estimating its parameters from the same data
+changes the null distribution of the statistic and invalidates that p-value
+[@zeimbekakis2024misuses].
+
 In this vignette, we test whether independent, positive observations follow a
 lognormal distribution with unknown log-scale mean and standard deviation.
 We use the multiplier bootstrap first, then compare it with the parametric
