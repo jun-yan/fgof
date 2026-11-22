@@ -37,6 +37,7 @@ jobs:
           # V8 is only for R CMD check's HTML math validation.
           extra-packages: |
             any::rcmdcheck
+            ${{ runner.os == 'Windows' && 'local::.' || '' }}
             ${{ matrix.config.incoming && 'any::V8' || '' }}
           needs: check
       - uses: quarto-dev/quarto-actions/setup@v2
