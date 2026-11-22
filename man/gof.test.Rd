@@ -17,7 +17,8 @@ gof.test(
   derCdfWrtPar = NULL,
   derLogPdfWrtPar = NULL,
   distr.args = list(),
-  optim.args = list()
+  optim.args = list(),
+  refit.failure = c("stop", "report")
 )
 }
 \arguments{
@@ -46,6 +47,10 @@ gof.test(
 \item{distr.args}{Named list of fixed arguments passed to the distribution functions.}
 
 \item{optim.args}{Named list of arguments passed to \code{stats::optim}, such as \code{method}, \code{lower}, \code{upper}, and \code{control}.}
+
+\item{refit.failure}{Action after a parametric bootstrap refit fails.
+Use \code{"stop"} (default) or \code{"report"} to attempt all replicates
+and return failure details. Ignored for the multiplier bootstrap.}
 }
 \description{
 Goodness-of-fit testing with multiplier or parametric bootstrap.
@@ -90,7 +95,19 @@ Goodness-of-fit testing with multiplier or parametric bootstrap.
   for any remaining numerical Jacobian.
 
   The parametric bootstrap simulates from the fitted model and refits every
-  replicate. The multiplier bootstrap uses centered standard normal multipliers
+  replicate. If L-BFGS-B reports an abnormal line-search termination,
+  the refit is retried once on the same sample, starting from the
+  optimizer's returned estimate when the estimate and objective are finite.
+  The retry sets \code{ndeps = 1e-5} per parameter on the optimizer's
+  \code{par / parscale} scale. Supplying \code{optim.args$control$ndeps}
+  or an optimizer gradient via \code{optim.args$gr} skips the retry.
+  A failed refit stops the
+  test by default. With \code{refit.failure = "report"}, failed columns
+  contain \code{NA}. If any refits fail, p-values are \code{NA} and the
+  bounds treat every missing statistic first as a nonexceedance and then
+  as an exceedance, using the full requested replicate count. The bounds
+  describe this bootstrap run and are separate from Monte Carlo uncertainty.
+  The multiplier bootstrap uses centered standard normal multipliers
   and an estimated parameter influence function. Grid-based statistics reuse
   the grid constructed from the original observations in both procedures.
 
@@ -125,6 +142,11 @@ Goodness-of-fit testing with multiplier or parametric bootstrap.
   \item{estimate}{vector of estimated parameter values}
   \item{stat.sim}{Matrix of bootstrap draws with one named row per statistic
     and \code{nsim} columns.}
+  \item{refit.failures}{In parametric report mode, a list containing the
+    failure count, fraction, replicate indices, and error messages.}
+  \item{p.value.bounds}{In parametric report mode, a matrix of lower and
+    upper bounds with one row per statistic. Both bounds equal the
+    reported p-value when all refits succeed.}
 }
 \references{
   Kojadinovic I. and Yan J. (2012): Goodness-of-fit testing based on a weighted

@@ -19,6 +19,13 @@
   corresponding list. Rename `method.args` to `numDeriv.args` to identify its
   role as the separate control for numerical differentiation.
 
+## Parametric bootstrap
+
+- Retry an L-BFGS-B line-search failure once on the same simulated dataset
+  when the optimizer uses default numerical gradients. Report the replicate
+  and optimizer diagnostics if fitting still fails.
+- Add opt-in parametric bootstrap failure reporting with p-value bounds.
+
 # fgof 0.2-2
 
 ## Performance

@@ -4,7 +4,7 @@
 
 
 #### get MLE
-findMLE <- function(x, densfun, start, distr.args = list(), optim.args = list()) {
+findMLE <- function(x, densfun, start, distr.args = list(), optim.args = list(), bootstrap = NULL) {
   if (missing(densfun) || !(is.function(densfun)) )
     stop("'densfun' must be supplied as a function")
   if (!is.list(distr.args) ||
@@ -55,9 +55,43 @@ findMLE <- function(x, densfun, start, distr.args = list(), optim.args = list())
     optim.args$method <- if (any(c("lower", "upper") %in% names(optim.args)))
       "L-BFGS-B" else "Nelder-Mead"
   }
-  res <- do.call(stats::optim, c(list(par = start, fn = objective), optim.args))
-  if (res$convergence > 0L) 
-    stop("optimization failed")
+  run <- function(par, args) {
+    tryCatch(do.call(stats::optim, c(list(par = par, fn = objective), args)),
+             error = identity)
+  }
+  converged <- function(result) {
+    !inherits(result, "error") && result$convergence == 0L &&
+      all(is.finite(result$par)) && is.finite(result$value)
+  }
+  describe <- function(result) {
+    if (inherits(result, "error")) return(conditionMessage(result))
+    paste(c(paste("code", result$convergence), result$message), collapse = ", ")
+  }
+  res <- run(start, optim.args)
+  detail <- NULL
+  if (!is.null(bootstrap) && identical(optim.args$method, "L-BFGS-B") &&
+      !inherits(res, "error") && res$convergence == 52L &&
+      any(grepl("ABNORMAL_TERMINATION_IN_LNSRCH", res$message, fixed = TRUE)) &&
+      is.null(optim.args$gr) && is.null(optim.args$control$ndeps) &&
+      all(is.finite(res$par)) && is.finite(res$value)) {
+    retry.args <- optim.args
+    # ndeps is measured on the optimizer's parscale coordinate system.
+    retry.args$control$ndeps <- rep(1e-5, length(start))
+    retry <- run(res$par, retry.args)
+    if (converged(retry)) {
+      res <- retry
+    } else {
+      detail <- paste0("; retry: ", describe(retry))
+    }
+  }
+  if (!converged(res)) {
+    if (is.null(bootstrap) && inherits(res, "error")) stop(res)
+    context <- if (!is.null(bootstrap))
+      paste0(" in bootstrap replicate ", bootstrap) else ""
+    stop("optimization failed", context, " (", optim.args$method, "; start = ",
+         paste(format(unlist(start)), collapse = ", "), "): ", describe(res),
+         detail, call. = FALSE)
+  }
   ## sds <- sqrt(diag(solve(res$hessian)))
   list(estimate = res$par,
        ## sd = sds,
@@ -87,6 +121,9 @@ gradControl <- function(eps=1e-4, d=0.0001,
 ##' @param derLogPdfWrtPar Optional log-density derivative callback.
 ##' @param distr.args Named list of fixed arguments passed to the distribution functions.
 ##' @param optim.args Named list of arguments passed to \code{stats::optim}, such as \code{method}, \code{lower}, \code{upper}, and \code{control}.
+##' @param refit.failure Action after a parametric bootstrap refit fails.
+##'   Use \code{"stop"} (default) or \code{"report"} to attempt all replicates
+##'   and return failure details. Ignored for the multiplier bootstrap.
 ##' @rawRd
 ##' \details{
 ##'   Fixed distribution parameters belong in \code{distr.args}; optimizer
@@ -128,7 +165,19 @@ gradControl <- function(eps=1e-4, d=0.0001,
 ##'   for any remaining numerical Jacobian.
 ##'
 ##'   The parametric bootstrap simulates from the fitted model and refits every
-##'   replicate. The multiplier bootstrap uses centered standard normal multipliers
+##'   replicate. If L-BFGS-B reports an abnormal line-search termination,
+##'   the refit is retried once on the same sample, starting from the
+##'   optimizer's returned estimate when the estimate and objective are finite.
+##'   The retry sets \code{ndeps = 1e-5} per parameter on the optimizer's
+##'   \code{par / parscale} scale. Supplying \code{optim.args$control$ndeps}
+##'   or an optimizer gradient via \code{optim.args$gr} skips the retry.
+##'   A failed refit stops the
+##'   test by default. With \code{refit.failure = "report"}, failed columns
+##'   contain \code{NA}. If any refits fail, p-values are \code{NA} and the
+##'   bounds treat every missing statistic first as a nonexceedance and then
+##'   as an exceedance, using the full requested replicate count. The bounds
+##'   describe this bootstrap run and are separate from Monte Carlo uncertainty.
+##'   The multiplier bootstrap uses centered standard normal multipliers
 ##'   and an estimated parameter influence function. Grid-based statistics reuse
 ##'   the grid constructed from the original observations in both procedures.
 ##'
@@ -164,6 +213,11 @@ gradControl <- function(eps=1e-4, d=0.0001,
 ##'   \item{estimate}{vector of estimated parameter values}
 ##'   \item{stat.sim}{Matrix of bootstrap draws with one named row per statistic
 ##'     and \code{nsim} columns.}
+##'   \item{refit.failures}{In parametric report mode, a list containing the
+##'     failure count, fraction, replicate indices, and error messages.}
+##'   \item{p.value.bounds}{In parametric report mode, a matrix of lower and
+##'     upper bounds with one row per statistic. Both bounds equal the
+##'     reported p-value when all refits succeed.}
 ##' }
 ##' @rawRd
 ##' \references{
@@ -213,13 +267,15 @@ gof.test <- function(x, distr, nsim, start,
                      derCdfWrtPar = NULL,         ## function dF.dTheta(theta, x)
                      derLogPdfWrtPar = NULL,      ## function dlogf.dTheta(theta, x)
                      distr.args = list(),
-                     optim.args = list()) {
+                     optim.args = list(),
+                     refit.failure = c("stop", "report")) {
 #### x: the data vector to be tested
 #### distr: character string for the name of the distribution
 #### nsim: bootstrap sample size
 #### start: a named list to be passed to fitdistr
   automatic.derivatives <- missing(numDeriv.args)
   simulation <- match.arg(simulation)
+  report.failures <- simulation == "pb" && match.arg(refit.failure) == "report"
   qgrid <- match.arg(qgrid)
   if (!is.numeric(x) || !(is.null(dim(x)) || is.matrix(x)) ||
       NROW(x) < 1L || NCOL(x) < 1L || any(!is.finite(x)))
@@ -284,9 +340,9 @@ gof.test <- function(x, distr, nsim, start,
   p <- length(thetahat)
   log.arg <- "log" %in% names(formals(ddistr))
   
-  refit <- function(data, theta) {
+  refit <- function(data, theta, bootstrap) {
     initial <- if (dim == 1L) as.list(theta) else list(param = theta)
-    findMLE(data, ddistr, initial, distr.args, optim.args)$estimate
+    findMLE(data, ddistr, initial, distr.args, optim.args, bootstrap)$estimate
   }
 
   ## Forward only arguments accepted by each distribution function.
@@ -341,9 +397,17 @@ gof.test <- function(x, distr, nsim, start,
     names(stat) <- c("ks", "cvm", "ksa", "cvma")
   }
 
-  pb <- function() {
+  failures <- list()
+  pb <- function(bootstrap) {
     x.sim <- rdistr.my(n, thetahat)
-    theta.sim <- refit(x.sim, thetahat)
+    theta.sim <- if (report.failures) {
+      tryCatch(refit(x.sim, thetahat, bootstrap), error = identity)
+    } else refit(x.sim, thetahat, bootstrap)
+    if (inherits(theta.sim, "error")) {
+      failures[[length(failures) + 1L]] <<- list(
+        replicate = bootstrap, message = conditionMessage(theta.sim))
+      return(stats::setNames(rep(NA_real_, length(stat)), names(stat)))
+    }
     Fn.sim <- stats::ecdf(x.sim)
     Ftheta.sim <- function(x) pdistr.my(x, theta.sim)
     stat <- getStat(x.sim, n, Fn.sim, Ftheta.sim)
@@ -363,7 +427,7 @@ gof.test <- function(x, distr, nsim, start,
       parscale = parscale)
   }
 
-  if (simulation == "pb") stat.sim <- replicate(nsim, pb())
+  if (simulation == "pb") stat.sim <- vapply(seq_len(nsim), pb, stat)
   else {
     if (is.null(derLogPdfWrtPar))
       grad <- numericalJacobian(logdens, thetahat, numDeriv.args)
@@ -382,7 +446,21 @@ gof.test <- function(x, distr, nsim, start,
   }
 
   p.value <- (rowSums(stat.sim >= stat) + 0.5) / (nsim + 1)
-  list(statistic = stat, p.value = p.value, estimate = thetahat, stat.sim = stat.sim)
+  result <- list(statistic = stat, p.value = p.value, estimate = thetahat,
+                 stat.sim = stat.sim)
+  if (report.failures) {
+    count <- length(failures)
+    indices <- vapply(failures, function(failure) failure$replicate, integer(1))
+    completed <- !seq_len(nsim) %in% indices
+    exceeds <- rowSums(stat.sim[, completed, drop = FALSE] >= stat)
+    result$refit.failures <- list(
+      count = count, fraction = count / nsim,
+      replicate = indices,
+      message = vapply(failures, function(failure) failure$message, character(1)))
+    result$p.value.bounds <- cbind(lower = (exceeds + 0.5) / (nsim + 1),
+                                  upper = (exceeds + count + 0.5) / (nsim + 1))
+  }
+  result
 }
 
 empiricalCdf <- function(x) {
