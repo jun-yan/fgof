@@ -92,7 +92,7 @@ Resetting the seed uses the same multiplier draws in both fits. Comparing
 the simulated statistics directly shows how closely the two derivative
 methods agree, even when the discrete bootstrap p-values coincide.
 
-## Compare with automatic differentiation in RTMB
+## Run the multiplier bootstrap with RTMB derivatives
 
 With RTMB installed, `RTMB::MakeTape()` records the operations that compute
 the CDF or log-density at fixed evaluation points. Its `jacobian()` method
@@ -101,26 +101,37 @@ Use `RTMB::pnorm()` inside the tape so that RTMB can differentiate the
 standard normal CDF. [RTMB on CRAN](https://CRAN.R-project.org/package=RTMB)
 
 ```{r, eval=requireNamespace("RTMB", quietly = TRUE)}
-theta <- unname(fit_analytic$estimate)
-points <- x[1:5]
-log_points <- log(points)
+cdf_gradient_rtmb <- function(theta, points) {
+  log_points <- log(as.numeric(points))
+  tape <- RTMB::MakeTape(function(par) {
+    RTMB::pnorm((log_points - par[1]) / par[2])
+  }, theta)
+  tape$jacobian(theta)
+}
 
-cdf_tape <- RTMB::MakeTape(function(par) {
-  RTMB::pnorm((log_points - par[1]) / par[2])
-}, theta)
+score_rtmb <- function(theta, points) {
+  log_points <- log(as.numeric(points))
+  tape <- RTMB::MakeTape(function(par) {
+    z <- (log_points - par[1]) / par[2]
+    -z^2 / 2 - log(par[2]) - log_points - log(2 * pi) / 2
+  }, theta)
+  tape$jacobian(theta)
+}
 
-log_density_tape <- RTMB::MakeTape(function(par) {
-  z <- (log_points - par[1]) / par[2]
-  -z^2 / 2 - log(par[2]) - log_points - log(2 * pi) / 2
-}, theta)
+set.seed(456)
+fit_rtmb <- gof.test(
+  x, "lnorm", nsim = 199, start = start,
+  derCdfWrtPar = cdf_gradient_rtmb, derLogPdfWrtPar = score_rtmb
+)
 
-c(cdf = max(abs(cdf_tape$jacobian(theta) - cdf_gradient(theta, points))),
-  score = max(abs(log_density_tape$jacobian(theta) - score(theta, points))))
+rbind(deriv = fit_analytic$p.value, RTMB = fit_rtmb$p.value)
+max(abs(fit_analytic$stat.sim - fit_rtmb$stat.sim))
 ```
 
-The two numbers are the largest absolute differences from the corresponding
-`stats::deriv()` gradients. Each tape holds the evaluation points fixed, so
-build a new tape if those points change.
+Each callback builds a tape for the evaluation points supplied by
+`gof.test()`. This lets the CDF callback evaluate derivatives at both
+the observations and the quantile grid. The results compare the RTMB
+and `stats::deriv()` runs using the same multiplier draws.
 
 ## Run the parametric bootstrap
 
