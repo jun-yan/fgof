@@ -1,7 +1,7 @@
 test_that("empirical lower-orthant counts handle ties and boundaries", {
   x <- rbind(c(0, 0), c(1, 0), c(1, 1), c(1, 1))
   points <- rbind(c(-1, -1), c(0, 0), c(1, 0), c(1, 1), c(2, 2))
-  expect_identical(fgof:::empiricalCdf(x)(points), c(0, 0.25, 0.5, 1, 1))
+  expect_identical(fgof:::mecdf(x)(points), c(0, 0.25, 0.5, 1, 1))
 })
 
 test_that("analytical t derivatives agree in dimensions two and three", {
@@ -28,6 +28,14 @@ test_that("both bivariate bootstrap paths return finite statistics", {
                     distr.args = list(dispstr = "un"),
                     optim.args = list(lower = c(-5, -5, 0.1, 0.1, -0.9),
                                       upper = c(5, 5, 5, 5, 0.9)))
+    empirical <- apply(x, 1, function(point) {
+      mean(x[, 1] <= point[1] & x[, 2] <= point[2])
+    })
+    fitted <- fgof:::pmymvnorm(x, out$estimate, dispstr = "un")
+    discrepancy <- empirical - fitted
+    expect_equal(out$statistic,
+                 c(ksa = max(abs(discrepancy)), cvma = sum(discrepancy^2)),
+                 tolerance = 1e-6)
     expect_true(all(is.finite(unlist(out))))
     expect_identical(dim(out$stat.sim), c(2L, 2L))
   }

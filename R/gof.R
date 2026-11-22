@@ -384,8 +384,8 @@ gof.test <- function(x, distr, nsim, start,
   }
   
   ## fxg <- ddistr.my(xg, thetahat) ## not needed
-  if (dim > 1) ecdf <- empiricalCdf
-  Fn <- stats::ecdf(x)
+  make_empirical_cdf <- if (dim > 1) mecdf else stats::ecdf
+  Fn <- make_empirical_cdf(x)
   Ftheta <- function (x) pdistr.my(x, thetahat)
   
   ## test statistics
@@ -408,7 +408,7 @@ gof.test <- function(x, distr, nsim, start,
         replicate = bootstrap, message = conditionMessage(theta.sim))
       return(stats::setNames(rep(NA_real_, length(stat)), names(stat)))
     }
-    Fn.sim <- stats::ecdf(x.sim)
+    Fn.sim <- make_empirical_cdf(x.sim)
     Ftheta.sim <- function(x) pdistr.my(x, theta.sim)
     stat <- getStat(x.sim, n, Fn.sim, Ftheta.sim)
     if (gridStat) {
@@ -463,13 +463,9 @@ gof.test <- function(x, distr, nsim, start,
   result
 }
 
-empiricalCdf <- function(x) {
+mecdf <- function(x) {
   x <- as.matrix(x)
-  function(points) {
-    points <- as.matrix(points)
-    vapply(seq_len(NROW(points)), function(i)
-      mean(rowSums(sweep(x, 2, points[i, ], "<=")) == NCOL(x)), numeric(1))
-  }
+  function(points) copula::F.n(as.matrix(points), x, offset = 0, smoothing = "none")
 }
 
 influFun <- function(xg, x, psi, F, theta, method.args, derCdfWrtPar) {

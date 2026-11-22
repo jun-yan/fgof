@@ -7,7 +7,7 @@ Authors@R: c(
     person(given = "Ivan", family = "Kojadinovic", role = "aut"),
     person(given = "Jun", family = "Yan", role = c("aut", "cre"),
            email = "jun.yan@uconn.edu"))
-Imports: mvtnorm, numDeriv
+Imports: copula, mvtnorm, numDeriv
 Suggests: testthat (>= 3.0.0), roxygen2
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
