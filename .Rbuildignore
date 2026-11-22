@@ -12,3 +12,4 @@
 ^.*\.tar\.gz$
 ^analysis$
 ^investigation$
+^vignettes/(bivariate-t|univariate)(\.html|_files)$

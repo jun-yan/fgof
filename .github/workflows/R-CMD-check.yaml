@@ -39,7 +39,7 @@ jobs:
             any::rcmdcheck
             ${{ matrix.config.incoming && 'any::V8' || '' }}
           needs: check
-      - uses: r-lib/actions/setup-pandoc@v2
+      - uses: quarto-dev/quarto-actions/setup@v2
       - name: Install HTML validation tools
         if: ${{ matrix.config.incoming }}
         run: |

@@ -39,8 +39,9 @@ so they remain strictly between zero and one.
 
 ## Development
 
-Install the R dependencies `mvtnorm` and `numDeriv`, plus `testthat` for tests,
-then run:
+Install the R dependencies and suggested packages listed in `DESCRIPTION`.
+Install the [Quarto CLI](https://quarto.org/docs/get-started/) to build the
+vignettes, then run the following commands from the repository root.
 
 ```sh
 make build    # Create fgof_<version>.tar.gz

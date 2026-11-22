@@ -1,9 +1,12 @@
 ---
 title: "Bivariate Student t goodness-of-fit tests with the multiplier bootstrap"
-output: rmarkdown::html_vignette
+engine: knitr
+format:
+  html:
+    html-math-method: mathml
 vignette: >
   %\VignetteIndexEntry{Bivariate Student t goodness-of-fit tests with the multiplier bootstrap}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
 
