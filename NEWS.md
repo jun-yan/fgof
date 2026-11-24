@@ -1,3 +1,16 @@
+# fgof 0.3-1
+
+- Restore the joint empirical CDF for the observed multivariate sample and
+  parametric bootstrap replicates. Version 0.3-0 incorrectly pooled the
+  coordinates into a univariate empirical CDF. The repair uses
+  `copula::F.n()` and can change multivariate test statistics and p-values.
+- Add Quarto vignettes for the univariate lognormal and bivariate Student
+  t models. Both compare numerical and analytical derivatives for the
+  multiplier bootstrap. The univariate vignette also demonstrates automatic
+  differentiation with RTMB and explains why the usual `ks.test()` p-value
+  is invalid when the null distribution is fitted to the test sample.
+- Add the methods paper as the package citation for `citation("fgof")`.
+
 # fgof 0.3-0
 
 ## Performance
